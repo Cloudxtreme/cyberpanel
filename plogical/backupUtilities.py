@@ -1,10 +1,13 @@
-import thread
+import os,sys
+sys.path.append('/usr/local/CyberCP')
+import django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "CyberCP.settings")
+django.setup()
 import pexpect
 import CyberCPLogFileWriter as logging
 import subprocess
 import shlex
 from shutil import make_archive,rmtree
-import os
 import mysqlUtilities
 import tarfile
 from multiprocessing import Process
@@ -14,65 +17,307 @@ import signal
 from installUtilities import installUtilities
 import argparse
 from shutil import move,copy
-import sys
+from xml.etree import ElementTree
+from virtualHostUtilities import virtualHostUtilities
+from sslUtilities import sslUtilities
+from websiteFunctions.models import Websites, ChildDomains, Backups
+from databases.models import Databases
+from loginSystem.models import Administrator
+from dnsUtilities import DNS
+from xml.etree.ElementTree import Element, SubElement
+from xml.etree import ElementTree
+from xml.dom import minidom
+from backup.models import DBUsers
+from mailServer.models import Domains as eDomains
+from random import randint
+import time
+from plogical.mailUtilities import mailUtilities
 
+## I am not the monster that you think I am..
 
 class backupUtilities:
 
     completeKeyPath  = "/home/cyberpanel/.ssh"
     destinationsPath = "/home/cyberpanel/destinations"
 
+    @staticmethod
+    def prepareBackupMeta(backupDomain, backupName, tempStoragePath, backupPath):
+        try:
+            ## /home/example.com/backup/backup-example-06-50-03-Thu-Feb-2018 -- tempStoragePath
+            ## /home/example.com/backup - backupPath
+
+            if not os.path.exists(backupPath):
+                os.mkdir(backupPath)
+
+            if not os.path.exists(tempStoragePath):
+                os.mkdir(tempStoragePath)
+
+            website = Websites.objects.get(domain=backupDomain)
+
+            ######### Generating meta
+
+            ## XML Generation
+
+            metaFileXML = Element('metaFile')
+
+            child = SubElement(metaFileXML, 'masterDomain')
+            child.text = backupDomain
+
+            child = SubElement(metaFileXML, 'phpSelection')
+            child.text = website.phpSelection
+
+            child = SubElement(metaFileXML, 'externalApp')
+            child.text = website.externalApp
+
+            childDomains = website.childdomains_set.all()
+
+            databases = website.databases_set.all()
+
+            ## Child domains XML
+
+            childDomainsXML = Element('ChildDomains')
+
+            for items in childDomains:
+                childDomainXML = Element('domain')
+
+                child = SubElement(childDomainXML, 'domain')
+                child.text = items.domain
+                child = SubElement(childDomainXML, 'phpSelection')
+                child.text = items.phpSelection
+                child = SubElement(childDomainXML, 'path')
+                child.text = items.path
+
+                childDomainsXML.append(childDomainXML)
+
+            metaFileXML.append(childDomainsXML)
+
+            ## Databases XML
+
+            databasesXML = Element('Databases')
+
+            for items in databases:
+                dbuser = DBUsers.objects.get(user=items.dbUser)
+
+                databaseXML = Element('database')
+
+                child = SubElement(databaseXML, 'dbName')
+                child.text = items.dbName
+                child = SubElement(databaseXML, 'dbUser')
+                child.text = items.dbUser
+                child = SubElement(databaseXML, 'password')
+                child.text = dbuser.password
+
+                databasesXML.append(databaseXML)
+
+            metaFileXML.append(databasesXML)
+
+            ## Get Aliases
+
+            aliasesXML = Element('Aliases')
+
+            aliases = backupUtilities.getAliases(backupDomain)
+
+            for items in aliases:
+                child = SubElement(aliasesXML, 'alias')
+                child.text = items
+
+            metaFileXML.append(aliasesXML)
+
+            ## Finish Alias
+
+            ## DNS Records XML
+
+            try:
+                dnsRecordsXML = Element("dnsrecords")
+                dnsRecords = DNS.getDNSRecords(backupDomain)
+
+                for items in dnsRecords:
+                    dnsRecordXML = Element('dnsrecord')
+
+                    child = SubElement(dnsRecordXML, 'type')
+                    child.text = items.type
+                    child = SubElement(dnsRecordXML, 'name')
+                    child.text = items.name
+                    child = SubElement(dnsRecordXML, 'content')
+                    child.text = items.content
+                    child = SubElement(dnsRecordXML, 'priority')
+                    child.text = str(items.prio)
+
+                    dnsRecordsXML.append(dnsRecordXML)
+
+                metaFileXML.append(dnsRecordsXML)
+
+            except BaseException, msg:
+                logging.CyberCPLogFileWriter.writeToFile(str(msg))
+
+            ## Email accounts XML
+
+            try:
+                emailRecordsXML = Element('emails')
+                eDomain = eDomains.objects.get(domain=backupDomain)
+                emailAccounts = eDomain.eusers_set.all()
+
+                for items in emailAccounts:
+                    emailRecordXML = Element('emailAccount')
+
+                    child = SubElement(emailRecordXML, 'email')
+                    child.text = items.email
+                    child = SubElement(emailRecordXML, 'password')
+                    child.text = items.password
+
+                    emailRecordsXML.append(emailRecordXML)
+
+                metaFileXML.append(emailRecordsXML)
+
+            except BaseException, msg:
+                logging.CyberCPLogFileWriter.writeToFile(str(msg))
+
+            ## Email meta generated!
+
+
+            def prettify(elem):
+                """Return a pretty-printed XML string for the Element.
+                """
+                rough_string = ElementTree.tostring(elem, 'utf-8')
+                reparsed = minidom.parseString(rough_string)
+                return reparsed.toprettyxml(indent="  ")
+
+            ## /home/example.com/backup/backup-example-06-50-03-Thu-Feb-2018/meta.xml -- metaPath
+            metaPath = os.path.join(tempStoragePath, "meta.xml")
+
+            xmlpretty = prettify(metaFileXML).encode('ascii', 'ignore')
+            metaFile = open(metaPath, 'w')
+            metaFile.write(xmlpretty)
+            metaFile.close()
+
+            ## meta generated
+
+
+            newBackup = Backups(website=website, fileName=backupName, date=time.strftime("%I-%M-%S-%a-%b-%Y"),
+                                size=0, status=0)
+            newBackup.save()
+
+            return 1,'None'
+
+
+        except BaseException, msg:
+            return 0,str(msg)
+
 
     @staticmethod
     def startBackup(tempStoragePath,backupName,backupPath):
         try:
 
-            ## writing the name of backup file
+            ##### Writing the name of backup file.
 
-            backupFileNamePath = backupPath + "backupFileName"
+            ## /home/example.com/backup/backupFileName
+            backupFileNamePath = os.path.join(backupPath,"backupFileName")
             status = open(backupFileNamePath, "w")
             status.write(backupName)
             status.close()
 
-            meta = open(tempStoragePath+'/meta',"r").readlines()
+            #####
 
-            status = open(backupPath+'status',"w")
-            status.write("Making archive of home directory\n")
+
+            status = open(os.path.join(backupPath,'status'),"w")
+            status.write("Making archive of home directory.\n")
             status.close()
 
-            count = 0
-            dbCheck = 0
+            ##### Parsing XML Meta file!
 
-            for items in meta:
-                if count==0:
-                    domainName = items.split('--')[0]
-                    make_archive(tempStoragePath+"/public_html", 'gztar', "/home/"+domainName+"/public_html")
-                    count = count + 1
-                else:
-                    if items.find("Databases")>-1:
-                        dbCheck = 1
-                        continue
+            ## /home/example.com/backup/backup-example-06-50-03-Thu-Feb-2018 -- tempStoragePath
+            backupMetaData = ElementTree.parse(os.path.join(tempStoragePath,'meta.xml'))
 
-                    if dbCheck == 1:
-                        dbName = items.split('--')[0]
-                        status = open(backupPath + 'status', "w")
-                        status.write("Backing up database: " + dbName)
-                        status.close()
-                        mysqlUtilities.mysqlUtilities.createDatabaseBackup(dbName, tempStoragePath)
+            ##### Making archive of home directory
+
+            domainName = backupMetaData.find('masterDomain').text
+
+            ## /home/example.com/backup/backup-example-06-50-03-Thu-Feb-2018 -- tempStoragePath
+            ## shutil.make_archive
+
+            make_archive(os.path.join(tempStoragePath,"public_html"), 'gztar', os.path.join("/home",domainName,"public_html"))
+
+            ## backup email accounts
+
+            status = open(os.path.join(backupPath, 'status'), "w")
+            status.write("Backing up email accounts!\n")
+            status.close()
+
+            try:
+                make_archive(os.path.join(tempStoragePath,domainName),'gztar',os.path.join("/home","vmail",domainName))
+            except:
+                pass
+
+            ## Backing up databases
+            databases = backupMetaData.findall('Databases/database')
+
+            for database in databases:
+
+                dbName = database.find('dbName').text
+
+                status = open(os.path.join(backupPath,'status'), "w")
+                status.write("Backing up database: " + dbName)
+                status.close()
+                if mysqlUtilities.mysqlUtilities.createDatabaseBackup(dbName, tempStoragePath) == 0:
+                    raise BaseException
+
+            ##### Saving SSL Certificates if any
+
+            try:
+                pathToStoreSSL = sslUtilities.Server_root + "/conf/vhosts/" + "SSL-" + domainName
+                if os.path.exists(pathToStoreSSL):
+                    pathToStoreSSLPrivKey = pathToStoreSSL + "/privkey.pem"
+                    pathToStoreSSLFullChain = pathToStoreSSL + "/fullchain.pem"
+
+                    copy(pathToStoreSSLPrivKey, tempStoragePath + "/privkey.pem")
+                    copy(pathToStoreSSLFullChain, tempStoragePath + "/fullchain.pem")
+            except BaseException, msg:
+                logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startBackup]")
 
 
-            make_archive(backupPath+"/"+backupName, 'gztar', tempStoragePath)
+            ## Child Domains SSL.
+
+
+            childDomains = backupMetaData.findall('ChildDomains/domain')
+
+            try:
+                for childDomain in childDomains:
+
+                    actualChildDomain = childDomain.find('domain').text
+
+                    pathToStoreSSL = sslUtilities.Server_root + "/conf/vhosts/" + "SSL-" + actualChildDomain
+
+                    if os.path.exists(pathToStoreSSL):
+                        pathToStoreSSLPrivKey = pathToStoreSSL + "/privkey.pem"
+                        pathToStoreSSLFullChain = pathToStoreSSL + "/fullchain.pem"
+
+                        tempKeyPath = os.path.join(tempStoragePath, actualChildDomain)
+
+                        if not os.path.exists(tempKeyPath):
+                            os.mkdir(tempKeyPath)
+
+                        copy(pathToStoreSSLPrivKey, tempKeyPath + "/privkey.pem")
+                        copy(pathToStoreSSLFullChain, tempKeyPath + "/fullchain.pem")
+
+            except BaseException, msg:
+                logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startBackup]")
+
+            ##### Saving SSL Certificates if any
+
+            ## shutil.make_archive. Creating final package.
+
+            make_archive(os.path.join(backupPath,backupName), 'gztar', tempStoragePath)
             rmtree(tempStoragePath)
 
-            status = open(backupPath + 'status', "w")
-            status.write("completed\n")
+
+            status = open(os.path.join(backupPath,'status'), "w")
+            status.write("Completed\n")
             status.close()
 
 
         except BaseException,msg:
             try:
-                os.remove(backupPath+"/"+backupName+".tar.gz")
-
+                os.remove(os.path.join(backupPath,backupName+".tar.gz"))
             except:
                 logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startBackup]")
 
@@ -81,12 +326,11 @@ class backupUtilities:
             except:
                 logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startBackup]")
 
-            status = open(backupPath + 'status', "w")
+            status = open(os.path.join(backupPath,'status'), "w")
             status.write(backupName + "\n")
             status.write("Aborted, please check CyberPanel main log file. [5009]")
             status.close()
             logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startBackup]")
-
 
     @staticmethod
     def initiateBackup(tempStoragePath,backupName,backupPath):
@@ -100,13 +344,105 @@ class backupUtilities:
             logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [initiateBackup]")
 
     @staticmethod
+    def createWebsiteFromBackup(backupFileOrig, dir):
+        try:
+            backupFile = backupFileOrig.strip(".tar.gz")
+            originalFile = "/home/backup/" + backupFileOrig
+
+            if os.path.exists(backupFileOrig):
+                path = backupFile
+            elif not os.path.exists(originalFile):
+                dir = dir
+                path = "/home/backup/transfer-" + str(dir) + "/" + backupFile
+            else:
+                path = "/home/backup/" + backupFile
+
+            admin = Administrator.objects.get(pk=1)
+
+            ## open meta file to read data
+
+            ## Parsing XML Meta file!
+
+            backupMetaData = ElementTree.parse(os.path.join(path, 'meta.xml'))
+
+            domain = backupMetaData.find('masterDomain').text
+            phpSelection = backupMetaData.find('phpSelection').text
+            externalApp = backupMetaData.find('externalApp').text
+
+            ## Pre-creation checks
+
+            if Websites.objects.filter(domain=domain).count() > 0:
+                raise BaseException('This website already exists.')
+
+
+            if ChildDomains.objects.filter(domain=domain).count() > 0:
+                raise BaseException("This website already exists as child domain.")
+
+
+            ####### Pre-creation checks ends
+
+            numberOfWebsites = Websites.objects.count() + ChildDomains.objects.count()
+
+            ## Create Configurations
+
+            result = virtualHostUtilities.createVirtualHost(domain, admin.email, phpSelection, externalApp,
+                                                            numberOfWebsites, 0, 'CyberPanel', 1, 0,
+                                                            admin.userName, 'Default')
+
+            if result[0] == 0:
+                raise BaseException(result[1])
+
+            ## Create Configurations ends here
+
+            ## Create databases
+
+            databases = backupMetaData.findall('Databases/database')
+            website = Websites.objects.get(domain=domain)
+
+            for database in databases:
+                dbName = database.find('dbName').text
+                dbUser = database.find('dbUser').text
+
+                if mysqlUtilities.mysqlUtilities.createDatabase(dbName, dbUser, "cyberpanel") == 0:
+                    raise BaseException("Failed to create Databases!")
+
+                newDB = Databases(website=website, dbName=dbName, dbUser=dbUser)
+                newDB.save()
+
+            ## Create dns zone
+
+            dnsrecords = backupMetaData.findall('dnsrecords/dnsrecord')
+
+            DNS.createDNSZone(domain, admin)
+
+            zone = DNS.getZoneObject(domain)
+
+            for dnsrecord in dnsrecords:
+
+                recordType = dnsrecord.find('type').text
+                value = dnsrecord.find('name').text
+                content = dnsrecord.find('content').text
+                prio = int(dnsrecord.find('priority').text)
+
+                DNS.createDNSRecord(zone, value, recordType, content, prio, 3600)
+
+
+            return 1,'None'
+
+        except BaseException, msg:
+            return 0, str(msg)
+
+    @staticmethod
     def startRestore(backupName, dir):
         try:
 
             if dir == "CyberPanelRestore":
                 backupFileName = backupName.strip(".tar.gz")
-                completPath = "/home/backup/" + backupFileName ## without extension
-                originalFile = "/home/backup/" + backupName ## with extension
+                completPath = os.path.join("/home","backup",backupFileName) ## without extension
+                originalFile = os.path.join("/home","backup",backupName) ## with extension
+            elif dir == 'CLI':
+                completPath = backupName.strip(".tar.gz")  ## without extension
+                originalFile = backupName  ## with extension
             else:
                 backupFileName = backupName.strip(".tar.gz")
                 completPath = "/home/backup/transfer-"+str(dir)+"/"+backupFileName ## without extension
@@ -114,147 +450,247 @@ class backupUtilities:
 
 
 
-            pathToCompressedHome = completPath + "/public_html.tar.gz"
+            pathToCompressedHome = os.path.join(completPath,"public_html.tar.gz")
 
             if not os.path.exists(completPath):
                 os.mkdir(completPath)
 
             ## writing pid of restore process
 
-            pid = open(completPath + '/pid', "w")
+            pid = open(os.path.join(completPath,'pid'), "w")
             pid.write(str(os.getpid()))
             pid.close()
 
-            status = open(completPath + '/status', "w")
-            status.write("Extracting Main Archive")
+
+            status = open(os.path.join(completPath,'status'), "w")
+            status.write("Extracting Main Archive!")
             status.close()
+
+            ## Converting /home/backup/backup-example-06-50-03-Thu-Feb-2018.tar.gz -> /home/backup/backup-example-06-50-03-Thu-Feb-2018
 
             tar = tarfile.open(originalFile)
             tar.extractall(completPath)
             tar.close()
 
-            status = open(completPath + '/status', "w")
-            status.write("Creating Account and databases")
+
+
+            status = open(os.path.join(completPath,'status'), "w")
+            status.write("Creating Accounts,Databases and DNS records!")
             status.close()
 
-            ## creating website and its dabases
-
-            try:
-                finalData = json.dumps({'backupFile': backupName,"dir":dir})
-                r = requests.post("http://localhost:5003/websites/CreateWebsiteFromBackup", data=finalData,verify=False)
-                data = json.loads(r.text)
-
-                if data['createWebSiteStatus'] == 1:
-                    pass
-                else:
-                    status = open(completPath + '/status', "w")
-                    status.write("Error Message: " + data['error_message'] +". Not able to create Account and databases, aborting. [5009]")
-                    status.close()
-                    logging.CyberCPLogFileWriter.writeToFile(r.text)
-                    return 0
-            except BaseException,msg:
-                status = open(completPath + '/status', "w")
-                status.write("Error Message: " + str(msg) +". Not able to create Account and databases, aborting. [5009]")
-                status.close()
-                logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startRestore]")
-                return 0
-
-            ########### creating sub/addon/parked domains
-
-            status = open(completPath + '/status', "w")
-            status.write("Creating Child Domains")
-            status.close()
-
-            ## reading meta file to create subdomains
-
-            data = open(completPath + "/meta", 'r').readlines()
+            ########### Creating website and its dabases
 
             ## extracting master domain for later use
+            backupMetaData = ElementTree.parse(os.path.join(completPath, "meta.xml"))
+            masterDomain = backupMetaData.find('masterDomain').text
 
-            masterDomain = data[0].split('-')[0]
-            externalApp = data[0].split('-')[2]
-            websiteHome = "/home/" + masterDomain + "/public_html"
+            result = backupUtilities.createWebsiteFromBackup(backupName, dir)
 
+            if result[0] == 1:
+                ## Let us try to restore SSL.
+
+                if os.path.exists(completPath + "/privkey.pem"):
+
+                    pathToStoreSSL = sslUtilities.Server_root + "/conf/vhosts/" + "SSL-" + masterDomain
+
+                    if not os.path.exists(pathToStoreSSL):
+                        os.mkdir(pathToStoreSSL)
+
+                    sslUtilities.installSSLForDomain(masterDomain)
+
+                    pathToStoreSSLPrivKey = pathToStoreSSL + "/privkey.pem"
+                    pathToStoreSSLFullChain = pathToStoreSSL + "/fullchain.pem"
+
+                    copy(completPath + "/privkey.pem", pathToStoreSSLPrivKey)
+                    copy(completPath + "/fullchain.pem", pathToStoreSSLFullChain)
+
+                    command = "chown -R " + "lsadm" + ":" + "lsadm" + " " + pathToStoreSSL
+                    cmd = shlex.split(command)
+                    subprocess.call(cmd)
+            else:
+                status = open(os.path.join(completPath, 'status'), "w")
+                status.write("Error Message: " + result[1] +
+                             ". Not able to create Account, Databases and DNS Records, aborting. [5009]")
+                status.close()
+                return 0
+
+            ########### Creating child/sub/addon/parked domains
+
+            status = open(os.path.join(completPath,'status'), "w")
+            status.write("Creating Child Domains!")
+            status.close()
+
+            ## Reading meta file to create subdomains
+
+            externalApp = backupMetaData.find('externalApp').text
+            websiteHome = os.path.join("/home",masterDomain,"public_html")
+
+
+            ### Restoring Child Domains if any.
+
+            childDomains = backupMetaData.findall('ChildDomains/domain')
 
             try:
-                childDomainsCheck = 0
-                for items in data:
-                    if items.find("Child Domains") > -1:
-                        childDomainsCheck = 1
+                for childDomain in childDomains:
+
+                    domain = childDomain.find('domain').text
+                    phpSelection = childDomain.find('phpSelection').text
+                    path = childDomain.find('path').text
+
+                    finalData = json.dumps(
+                        {'masterDomain': masterDomain, 'domainName': domain, 'phpSelection': phpSelection,
+                         'path': path,
+                         'ssl': 0, 'restore': 1,
+                         'dkimCheck': 0,
+                         'openBasedir':0})
+                    r = requests.post("http://localhost:5003/websites/submitDomainCreation", data=finalData,
+                                      verify=False)
+
+                    data = json.loads(r.text)
+
+                    if data['createWebSiteStatus'] == 1:
+                        rmtree(websiteHome)
+
+                        ## Let us try to restore SSL for Child Domains.
+
+                        tempPath = os.path.join(completPath, domain)
+
+                        if os.path.exists(tempPath + "/privkey.pem"):
+
+                            pathToStoreSSL = sslUtilities.Server_root + "/conf/vhosts/" + "SSL-" + domain
+
+                            if not os.path.exists(pathToStoreSSL):
+                                os.mkdir(pathToStoreSSL)
+
+                            sslUtilities.installSSLForDomain(domain)
+
+                            pathToStoreSSLPrivKey = pathToStoreSSL + "/privkey.pem"
+                            pathToStoreSSLFullChain = pathToStoreSSL + "/fullchain.pem"
+
+                            copy(tempPath + "/privkey.pem", pathToStoreSSLPrivKey)
+                            copy(tempPath + "/fullchain.pem", pathToStoreSSLFullChain)
+
+                            command = "chown -R " + "lsadm" + ":" + "lsadm" + " " + pathToStoreSSL
+                            cmd = shlex.split(command)
+
                         continue
-                    if items.find("Databases") > -1:
-                        break
-
-                    if childDomainsCheck == 1:
-                        domain = items.split('--')[0]
-                        phpSelection = items.split('--')[1]
-                        path = items.split('--')[2].strip("\n")
-
-
-                        finalData = json.dumps({'masterDomain': masterDomain, 'domainName': domain,'phpSelection': phpSelection,'path': path,'ssl':0,'restore':1})
-                        r = requests.post("http://localhost:5003/websites/submitDomainCreation", data=finalData,
-                                          verify=False)
-
-                        data = json.loads(r.text)
-
-                        if data['createWebSiteStatus'] == 1:
-                            rmtree(websiteHome)
-                            continue
-                        else:
-                            status = open(completPath + '/status', "w")
-                            status.write("Error Message: " + data['error_message'] +". Not able to create child domains, aborting. [5009]")
-                            status.close()
-                            logging.CyberCPLogFileWriter.writeToFile(r.text)
-                            return 0
-
+                    else:
+                        status = open(os.path.join(completPath,'status'), "w")
+                        status.write("Error Message: " + data[
+                            'error_message'] + ". Not able to create child domains, aborting. [5009]")
+                        status.close()
+                        return 0
 
             except BaseException, msg:
-                status = open(completPath + '/status', "w")
+                status = open(os.path.join(completPath,'status'), "w")
                 status.write("Error Message: " + str(msg) +". Not able to create child domains, aborting. [5009]")
                 status.close()
                 logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startRestore]")
                 return 0
 
+            ## Restore Aliases
+
+            status = open(os.path.join(completPath, 'status'), "w")
+            status.write("Restoring Domain Aliases!")
+            status.close()
+
+            aliases = backupMetaData.findall('Aliases/alias')
+
+            for items in aliases:
+                virtualHostUtilities.createAlias(masterDomain, items.text, 0, "", "")
+
+            ## Restoring email accounts
+
+            status = open(os.path.join(completPath, 'status'), "w")
+            status.write("Restoring email accounts!")
+            status.close()
+
+            emailAccounts = backupMetaData.findall('emails/emailAccount')
+
+            try:
+                for emailAccount in emailAccounts:
+
+                    email = emailAccount.find('email').text
+                    username = email.split("@")[0]
+                    password = emailAccount.find('password').text
+
+                    result = mailUtilities.createEmailAccount(masterDomain, username, password)
+                    if result[0] == 0:
+                        raise BaseException(result[1])
+
+            except BaseException, msg:
+                status = open(os.path.join(completPath,'status'), "w")
+                status.write("Error Message: " + str(msg) +". Not able to create email accounts, aborting. [5009]")
+                status.close()
+                logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startRestore]")
+                return 0
+
+            ## Emails restored
+
             ## restoring databases
 
-            data = open(completPath + "/meta", 'r').readlines()
-
-
-            status = open(completPath + '/status', "w")
+            status = open(os.path.join(completPath,'status'), "w")
             status.write("Restoring Databases")
             status.close()
 
-            dbCheck = 0
+            databases = backupMetaData.findall('Databases/database')
 
-            for items in data:
-                if items.find("Databases") > -1:
-                    dbCheck = 1
-                    continue
-                if dbCheck == 1:
-                    dbData = items.split('--')
-                    mysqlUtilities.mysqlUtilities.restoreDatabaseBackup(dbData[0], completPath, dbData[2].strip('\n'))
+            for database in databases:
+                dbName = database.find('dbName').text
+                password = database.find('password').text
+                if mysqlUtilities.mysqlUtilities.restoreDatabaseBackup(dbName, completPath, password) == 0:
+                    raise BaseException
 
-            status = open(completPath + '/status', "w")
-            status.write("Extracting web home data")
+            ## Databases restored
+
+
+            status = open(os.path.join(completPath, 'status'), "w")
+            status.write("Extracting web home data!")
             status.close()
+
+            # /home/backup/backup-example-06-50-03-Thu-Feb-2018/public_html.tar.gz
 
             tar = tarfile.open(pathToCompressedHome)
             tar.extractall(websiteHome)
             tar.close()
 
-            status = open(completPath + '/status', "w")
+            ## extracting email accounts
+
+            status = open(os.path.join(completPath, 'status'), "w")
+            status.write("Extracting email accounts!")
+            status.close()
+
+            try:
+                pathToCompressedEmails = os.path.join(completPath, masterDomain + ".tar.gz")
+                emailHome = os.path.join("/home","vmail",masterDomain)
+
+                tar = tarfile.open(pathToCompressedEmails)
+                tar.extractall(emailHome)
+                tar.close()
+            except:
+                pass
+
+            ## emails extracted
+
+            ## Change permissions
+
+            command = "chmod -r vmail:vmail " + emailHome
+            subprocess.call(shlex.split(command))
+
+            ##
+
+            status = open(os.path.join(completPath,'status'), "w")
             status.write("Done")
             status.close()
+
             installUtilities.reStartLiteSpeed()
 
             command = "chown -R " + externalApp + ":" + externalApp + " " + websiteHome
-
             cmd = shlex.split(command)
-
             subprocess.call(cmd)
 
         except BaseException, msg:
-            status = open(completPath + '/status', "w")
+            status = open(os.path.join(completPath,'status'), "w")
             status.write(str(msg) + " [5009]")
             status.close()
             logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [startRestore]")
@@ -305,18 +741,24 @@ class backupUtilities:
             else:
                 return [0,"Host is Down."]
 
-            expectation = "password:"
+            expectation = []
+            expectation.append("password:")
+            expectation.append("Permission denied")
 
-
-            command = "ssh -o StrictHostKeyChecking=no -p "+ port +" root@"+IPAddress+" mkdir /root/.ssh"
+            command = "sudo ssh -o StrictHostKeyChecking=no -p "+ port +" root@"+IPAddress+" mkdir /root/.ssh"
 
             setupKeys = pexpect.spawn(command,timeout=3)
 
-            setupKeys.expect(expectation)
+            index = setupKeys.expect(expectation)
 
             ## on first login attempt send password
 
-            setupKeys.sendline(password)
+            if index == 0:
+                setupKeys.sendline(password)
+            elif index == 1:
+                return [0, 'Please enable password authentication on your remote server.']
+            else:
+                raise BaseException
 
             ## if it again give you password, than provided password is wrong
 
@@ -327,7 +769,7 @@ class backupUtilities:
             index = setupKeys.expect(expectation)
 
             if index == 0:
-                return [0,"Wrong Password"]
+                return [0,"Wrong Password!"]
             elif index == 1:
                 setupKeys.wait()
 
@@ -343,7 +785,7 @@ class backupUtilities:
             logging.CyberCPLogFileWriter.writeToFile(setupKeys.before + " " + str(msg) + " [setupSSHKeys]")
             return [0, str(msg) + " [TIMEOUT setupSSHKeys]"]
         except BaseException, msg:
-            logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [setupSSHKeys]")
+            logging.CyberCPLogFileWriter.writeToFile(setupKeys.before + " " + str(msg) + " [setupSSHKeys]")
             return [0, str(msg) + " [setupSSHKeys]"]
 
     @staticmethod
@@ -371,6 +813,7 @@ class backupUtilities:
             expectation.append("password:")
             expectation.append("Last login")
             expectation.append(pexpect.EOF)
+            expectation.append(pexpect.TIMEOUT)
 
             checkConn = pexpect.spawn("sudo ssh -i /root/.ssh/cyberpanel -o StrictHostKeyChecking=no -p "+ port+" root@"+IPAddress, timeout=3)
             index = checkConn.expect(expectation)
@@ -382,11 +825,12 @@ class backupUtilities:
             elif index == 1:
                 subprocess.call(['kill', str(checkConn.pid)])
                 return [1, "None"]
+            elif index == 3:
+                subprocess.call(['kill', str(checkConn.pid)])
+                return [1, "None"]
             else:
                 subprocess.call(['kill', str(checkConn.pid)])
-                logging.CyberCPLogFileWriter.writeToFile(
-                    "Remote Server is not able to authenticate for transfer to initiate, IP Address:" + IPAddress)
-                return [0, "Remote Server is not able to authenticate for transfer to initiate, IP Address:" + IPAddress]
+                return [1, "None"]
 
         except pexpect.TIMEOUT, msg:
             logging.CyberCPLogFileWriter.writeToFile("Timeout "+IPAddress+ " [checkConnection]")
@@ -470,61 +914,70 @@ class backupUtilities:
     def createBackupDir(IPAddress,port):
 
         try:
-            command = "ssh -o StrictHostKeyChecking=no -p "+ port +" -i /home/cyberpanel/.ssh/cyberpanel cyberpanel@"+IPAddress+" mkdir /home/backup"
-
-            shlex.split(command)
-
+            command = "sudo ssh -o StrictHostKeyChecking=no -p "+ port +" -i /root/.ssh/cyberpanel root@"+IPAddress+" mkdir /home/backup"
             subprocess.call(shlex.split(command))
-
         except BaseException, msg:
             logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [createBackupDir]")
             return 0
 
     @staticmethod
-    def initiateBackupDirCreation(IPAddress,port):
-        try:
-            thread.start_new_thread(backupUtilities.createBackupDir, (IPAddress,port))
-        except BaseException,msg:
-            logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [initiateBackupDirCreation]")
-
-    @staticmethod
     def host_key_verification(IPAddress):
         try:
-            command = 'sudo ssh-keygen -R '+IPAddress
-
-            shlex.split(command)
-
+            command = 'sudo ssh-keygen -R ' + IPAddress
             subprocess.call(shlex.split(command))
-
+            return 1
         except BaseException, msg:
             logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [host_key_verification]")
             return 0
 
+    @staticmethod
+    def getAliases(masterDomain):
+        try:
 
-def submitBackupCreation(tempStoragePath,backupName,backupPath,metaPath):
+            confPath = os.path.join(virtualHostUtilities.Server_root, "conf/httpd_config.conf")
+            command = "sudo cat " + confPath
+            data = subprocess.check_output(shlex.split(command)).splitlines()
+            aliases = []
+
+            for items in data:
+                if items.find(masterDomain) > -1 and items.find('map') > -1:
+                    data = filter(None, items.split(" "))
+                    if data[1] == masterDomain:
+                        length = len(data)
+                        for i in range(3, length):
+                            currentAlias = data[i].rstrip(',').strip('\n')
+                            aliases.append(currentAlias)
+
+
+            return aliases
+
+        except BaseException, msg:
+            logging.CyberCPLogFileWriter.writeToFile(str(msg) + "  [getAliases]")
+            print 0
+
+
+def submitBackupCreation(tempStoragePath, backupName, backupPath, backupDomain):
     try:
-
-        if not os.path.exists(backupPath):
-            os.mkdir(backupPath)
-
-        if not os.path.exists(tempStoragePath):
-            os.mkdir(tempStoragePath)
+        ## /home/example.com/backup/backup-example-06-50-03-Thu-Feb-2018 -- tempStoragePath
+        ## backup-example-06-50-03-Thu-Feb-2018 -- backup name
+        ## /home/example.com/backup - backupPath
+        ## /home/cyberpanel/1047.xml - metaPath
 
 
-        move(metaPath,tempStoragePath+"/meta")
+        backupUtilities.prepareBackupMeta(backupDomain, backupName, tempStoragePath, backupPath)
 
         p = Process(target=backupUtilities.startBackup, args=(tempStoragePath, backupName, backupPath,))
         p.start()
-        pid = open(backupPath + 'pid', "w")
+        pid = open(os.path.join(backupPath, 'pid'), "w")
         pid.write(str(p.pid))
         pid.close()
 
         print "1,None"
 
-    except BaseException,msg:
+    except BaseException, msg:
         logging.CyberCPLogFileWriter.writeToFile(
             str(msg) + "  [submitBackupCreation]")
-        print "0,"+str(msg)
+        print "0," + str(msg)
 
 def cancelBackupCreation(backupCancellationDomain,fileName):
     try:
@@ -580,6 +1033,7 @@ def main():
     parser.add_argument('--tempStoragePath', help='')
     parser.add_argument('--backupName', help='!')
     parser.add_argument('--backupPath', help='')
+    parser.add_argument('--backupDomain', help='')
     parser.add_argument('--metaPath', help='')
 
     ## backup cancellation arguments
@@ -598,7 +1052,7 @@ def main():
     args = parser.parse_args()
 
     if args.function == "submitBackupCreation":
-        submitBackupCreation(args.tempStoragePath,args.backupName,args.backupPath,args.metaPath)
+        submitBackupCreation(args.tempStoragePath,args.backupName,args.backupPath, args.backupDomain)
     elif args.function == "cancelBackupCreation":
         cancelBackupCreation(args.backupCancellationDomain,args.fileName)
     elif args.function == "submitRestore":
@@ -606,5 +1060,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

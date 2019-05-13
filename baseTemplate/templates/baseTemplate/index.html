@@ -19,165 +19,42 @@
 <!-- Favicons -->
     {% load static %}
 
-
-
-<script src = "https://code.angularjs.org/1.6.5/angular.js"></script>
+<script src = "https://code.angularjs.org/1.6.5/angular.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-
-<link rel="apple-touch-icon-precomposed" sizes="144x144" href="{% static 'baseTemplate/assets/images/icons/apple-touch-icon-144-precomposed.png' %}">
-<link rel="apple-touch-icon-precomposed" sizes="114x114" href="{% static 'baseTemplate/assets/images/icons/apple-touch-icon-114-precomposed.png' %}">
-<link rel="apple-touch-icon-precomposed" sizes="72x72" href="{% static 'baseTemplate/assets/images/icons/apple-touch-icon-72-precomposed.png' %}">
-<link rel="apple-touch-icon-precomposed" href="{% static 'baseTemplate/assets/images/icons/apple-touch-icon-57-precomposed.png' %}">
-<link rel="shortcut icon" href="{% static 'baseTemplate/assets/images/icons/favicon.png' %}">
-
-
-
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/bootstrap/css/bootstrap.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'websiteFunctions/websiteFunctions.css' %}">
 
 <!-- HELPERS -->
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/animate.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/backgrounds.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/boilerplate.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/border-radius.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/grid.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/page-transitions.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/spacing.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/typography.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/utils.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/colors.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/bootstrap-toggle.min.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/finalBase/finalBase.css' %}">
 
 <!-- ELEMENTS -->
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/badges.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/buttons.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/content-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/dashboard-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/forms.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/images.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/info-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/invoice.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/loading-indicators.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/menus.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/panel-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/response-messages.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/responsive-tables.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/ribbon.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/social-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/tables.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/tile-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/elements/timeline.css' %}">
-
-
-
 <!-- ICONS -->
-
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/icons/fontawesome/fontawesome.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/icons/linecons/linecons.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/icons/spinnericon/spinnericon.css' %}">
-
 
 <!-- WIDGETS -->
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/accordion-ui/accordion.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/calendar/calendar.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/carousel/carousel.css' %}">
-
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/charts/justgage/justgage.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/charts/morris/morris.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/charts/piegage/piegage.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/charts/xcharts/xcharts.css' %}">
-
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/chosen/chosen.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/colorpicker/colorpicker.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/datatable/datatable.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/datepicker/datepicker.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/datepicker-ui/datepicker.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/daterangepicker/daterangepicker.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/dialog/dialog.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/dropdown/dropdown.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/dropzone/dropzone.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/file-input/fileinput.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/input-switch/inputswitch.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/input-switch/inputswitch-alt.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/ionrangeslider/ionrangeslider.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/jcrop/jcrop.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/jgrowl-notifications/jgrowl.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/loading-bar/loadingbar.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/maps/vector-maps/vectormaps.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/markdown/markdown.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/modal/modal.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/multi-select/multiselect.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/multi-upload/fileupload.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/nestable/nestable.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/noty-notifications/noty.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/popover/popover.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/pretty-photo/prettyphoto.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/progressbar/progressbar.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/range-slider/rangeslider.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/slidebars/slidebars.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/slider-ui/slider.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/summernote-wysiwyg/summernote-wysiwyg.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/tabs-ui/tabs.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/theme-switcher/themeswitcher.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/timepicker/timepicker.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/tocify/tocify.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/tooltip/tooltip.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/touchspin/touchspin.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/uniform/uniform.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/wizard/wizard.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/widgets/xeditable/xeditable.css' %}">
-
 <!-- SNIPPETS -->
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/chat.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/files-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/login-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/notification-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/progress-box.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/todo.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/user-profile.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/snippets/mobile-navigation.css' %}">
-
 <!-- APPLICATIONS -->
-
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/applications/mailbox.css' %}">
-
 <!-- Admin theme -->
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/themes/admin/layout.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/themes/admin/color-schemes/default.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/finalBase/finalBaseTheme.css' %}">
 
-<!-- Components theme -->
+<link rel="stylesheet" type="text/css" href="/static/baseTemplate/assets/themes/admin/layout.css">
+<link rel="stylesheet" type="text/css" href="/static/baseTemplate/assets/themes/admin/color-schemes/default.css">
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/themes/components/default.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/themes/components/border-radius.css' %}">
+<!-- Components theme, component below was above three CSS files. -->
+
+
 
 <!-- Admin responsive -->
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/responsive-elements.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/assets/helpers/admin-responsive.css' %}">
 
 <!-- Packages -->
 
-<link rel="stylesheet" type="text/css" href="{% static 'baseTemplate/percircle.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'packages/packages.css' %}">
 
-    <!-- JS Core -->
+<!-- JS Core -->
 
-    <script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/jquery-core.js' %}"></script>
-    <script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/jquery-ui-core.js' %}"></script>
-    <script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/jquery-ui-widget.js' %}"></script>
-    <script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/jquery-ui-mouse.js' %}"></script>
-    <script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/jquery-ui-position.js' %}"></script>
-    <script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/modernizr.js' %}"></script>
-    <script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/jquery-cookie.js' %}"></script>
-
-
-
-
+<script type="text/javascript" src="{% static 'baseTemplate/assets/js-core/jquery-core.min.js' %}"></script>
     <script type="text/javascript">
         $(window).load(function(){
             setTimeout(function() {
@@ -186,6 +63,7 @@
         });
     </script>
 
+<!-- JS Ends -->
 
 
 </head>
@@ -208,10 +86,7 @@
 
 <div class="clear"></div>
 
-<a href="#" title="{% trans '' %}" data-toggle="collapse" data-target="#sidebar-toggle-3" class="popover-title">
-    {% trans "CPU Status" %}
-    <span class="caret"></span>
-</a>
+
 <div ng-controller="systemStatusInfo" id="sidebar-toggle-3" class="collapse in">
 
     <ul class="progress-box">
@@ -337,15 +212,6 @@
             <span class="badge bg-yellow">{$ three $}</span>
         </a>
 
-        <a href="#" class="hdr-btn" id="fullscreen-btn" title="{% trans 'Fullscreen' %}">
-            <i class="glyph-icon icon-arrows-alt"></i>
-        </a>
-
-        <div class="dropdown" id="cloud-btn">
-            <a href="#" data-placement="bottom" class="tooltip-button sb-toggle-right" title="{% trans 'System Status' %}">
-                <i class="glyph-icon icon-linecons-cloud"></i>
-            </a>
-        </div>
         <div class="dropdown" id="dashnav-btn">
             <a href="#" data-toggle="dropdown" data-placement="bottom" class="popover-button-header tooltip-button" title="{% trans 'Dashboard Quick Menu' %}">
                 <i class="glyph-icon icon-linecons-cog"></i>
@@ -403,7 +269,7 @@
     </div><!-- #header-nav-right -->
 
 </div>
-        <div id="page-sidebar">
+<div id="page-sidebar">
     <div class="scroll-sidebar">
 
 
@@ -418,7 +284,7 @@
             <i class="glyph-icon icon-linecons-tv"></i>
             <span>{% trans "Dashboard" %}</span>
         </a>
-        <a href="{% url 'versionManagment' %}" title="{% trans 'Version Management' %}">
+        <a id="versionManagement" href="{% url 'versionManagment' %}" title="{% trans 'Version Management' %}">
             <i class="glyph-icon tooltip-button icon-cloud-upload" title="{% trans 'Version Management' %}" data-original-title=".icon-cloud-upload" aria-describedby="tooltip896208"></i>
             <span>{% trans "Version Management" %}</span>
         </a>
@@ -436,7 +302,7 @@
             <ul>
                 <li><a href="{% url 'viewProfile' %}" title="{% trans 'View Profile' %}"><span>{% trans "View Profile" %}</span></a></li>
                 <li id="normalUser"><a href="{% url 'createUser' %}" title="{% trans 'Create New User' %}"><span>{% trans "Create New User" %}</span></a></li>
-                <li id="normalUserA"><a href="{% url 'modifyUsers' %}" title="{% trans 'Modify User' %}"><span>{% trans "Modify User" %}</span></a></li>
+                <li><a href="{% url 'modifyUsers' %}" title="{% trans 'Modify User' %}"><span>{% trans "Modify User" %}</span></a></li>
                 <li id="normalUserB"><a href="{% url 'deleteUser' %}" title="{% trans 'Delete User' %}"><span>{% trans "Delete User" %}</span></a></li>
             </ul>
 
@@ -453,10 +319,10 @@
 
             <ul>
                 <li id="createWebsite"><a href="{% url 'createWebsite' %}" title="{% trans 'Create Website' %}"><span>{% trans "Create Website" %}</span></a></li>
-                <li><a href="{% url 'listWebsites' %}" title="{% trans 'List Websites' %}"><span>{% trans "List Websites" %}</span></a></li>
-                <li><a href="{% url 'modifyWebsite' %}" title="{% trans 'Modify Website' %}"><span>{% trans "Modify Website" %}</span></a></li>
+                <li ><a href="{% url 'listWebsites' %}" title="{% trans 'List Websites' %}"><span>{% trans "List Websites" %}</span></a></li>
+                <li id="modifyWebSite"><a href="{% url 'modifyWebsite' %}" title="{% trans 'Modify Website' %}"><span>{% trans "Modify Website" %}</span></a></li>
                 <li id="siteState"><a href="{% url 'siteState' %}" title="{% trans 'Suspend/Unsuspend' %}"><span>{% trans "Suspend/Unsuspend" %}</span></a></li>
-                <li><a href="{% url 'deleteWebsite' %}" title="{% trans 'Delete Website' %}"><span>{% trans "Delete Website" %}</span></a></li>
+                <li id="deleteWebsite"><a href="{% url 'deleteWebsite' %}" title="{% trans 'Delete Website' %}"><span>{% trans "Delete Website" %}</span></a></li>
             </ul>
 
         </div><!-- .sidebar-submenu -->
@@ -524,7 +390,9 @@
             <ul>
                 <li id="normalUserC"><a href="{% url 'createEmailAccount' %}" title="{% trans 'Create Email Account' %}"><span>{% trans "Create Email" %}</span></a></li>
                 <li><a href="{% url 'deleteEmailAccount' %}" title="{% trans 'Delete Email Account' %}"><span>{% trans "Delete Email" %}</span></a></li>
+                <li><a href="{% url 'emailForwarding' %}" title="{% trans 'Email Forwarding' %}"><span>{% trans "Email Forwarding" %}</span></a></li>
                 <li><a href="{% url 'changeEmailAccountPassword' %}" title="{% trans 'Change Password' %}"><span>{% trans "Change Password" %}</span></a></li>
+                <li><a href="{% url 'dkimManager' %}" title="{% trans 'DKIM Manager' %}"><span>{% trans "DKIM Manager" %}</span></a></li>
                 <li><a href="/rainloop/index.php" title="{% trans 'Access Webmail' %}" target="_blank"><span>{% trans "Access Webmail" %}</span></a></li>
 
             </ul>
@@ -583,6 +451,7 @@
             <ul>
                 <li><a href="{% url 'manageSSL' %}" title="{% trans 'Manage SSL' %}"><span>{% trans "Manage SSL" %}</span></a></li>
                 <li id="sslA"><a href="{% url 'sslForHostName' %}" title="{% trans 'Hostname SSL' %}"><span>{% trans "Hostname SSL" %}</span></a></li>
+                <li id="sslA"><a href="{% url 'sslForMailServer' %}" title="{% trans 'MailServer SSL' %}"><span>{% trans "MailServer SSL" %}</span></a></li>
             </ul>
 
         </div><!-- .sidebar-submenu -->
@@ -595,7 +464,6 @@
         <a href="#" title="{% trans 'Tuning' %}">
             <i class="glyph-icon icon-linecons-fire"></i>
             <span>{% trans "Tuning" %}</span>
-            <span class="bs-label badge-yellow">{% trans "NEW" %}</span>
         </a>
         <div class="sidebar-submenu">
 
@@ -618,6 +486,7 @@
 
                 <li><a href="{% url 'litespeedStatus' %}" title="{% trans 'LiteSpeed Status' %}"><span>{% trans "LiteSpeed Status" %}</span></a></li>
                 <li><a href="{% url 'cyberCPMainLogFile' %}" title="{% trans 'CyberPanel Main Log File' %}"><span>{% trans "CyberPanel Main Log File" %}</span></a></li>
+                <li><a href="{% url 'services' %}" title="{% trans 'Services Status' %}"><span>{% trans "Services Status" %}</span></a></li>
 
 
             </ul>
@@ -654,6 +523,7 @@
                 <li><a href="{% url 'errorLogs' %}" title="{% trans 'Error Logs' %}"><span>{% trans "Error Logs" %}</span></a></li>
                 <li><a href="{% url 'emaillogs' %}" title="{% trans 'Email Logs' %}"><span>{% trans "Email Log" %}</span></a></li>
                 <li><a href="{% url 'ftplogs' %}" title="{% trans 'FTP Logs' %}"><span>{% trans "FTP Logs" %}</span></a></li>
+                <li><a href="{% url 'modSecAuditLogs' %}" title="{% trans 'ModSecurity Audit Logs' %}"><span>{% trans "ModSec Audit Logs" %}</span></a></li>
             </ul>
 
         </div><!-- .sidebar-submenu -->
@@ -670,6 +540,26 @@
             <ul>
                 <li><a href="{% url 'firewallHome' %}" title="{% trans 'Firewall Home' %}"><span>{% trans "Firewall" %}</span></a></li>
                 <li><a href="{% url 'secureSSH' %}" title="{% trans 'Secure SSH' %}"><span>{% trans "Secure SSH" %}</span></a></li>
+                <li><a href="{% url 'modSecurity' %}" title="{% trans 'ModSecurity Configurations' %}"><span>{% trans "ModSecurity Conf" %}</span></a></li>
+                <li><a href="{% url 'modSecRules' %}" title="{% trans 'ModSecurity Rules' %}"><span>{% trans "ModSecurity Rules" %}</span></a></li>
+                <li><a href="{% url 'modSecRulesPacks' %}" title="{% trans 'ModSecurity Rules Packs' %}"><span>{% trans "ModSecurity Rules Packs" %}</span></a></li>
+            </ul>
+
+        </div><!-- .sidebar-submenu -->
+    </li>
+
+    <li id="normalUserI">
+        <a href="#" title="{% trans 'Mail Settings' %}">
+            <i class="glyph-icon icon-linecons-fire"></i>
+            <span>{% trans "Mail Settings" %}</span>
+            <span class="bs-label badge-yellow">{% trans "NEW" %}</span>
+        </a>
+        <div class="sidebar-submenu">
+
+            <ul>
+                <li><a href="{% url 'emailPolicyServer' %}" title="{% trans 'Email Policy Server' %}"><span>{% trans "Email Policy Server" %}</span></a></li>
+                <li><a href="{% url 'listDomains' %}" title="{% trans 'Email Limits' %}"><span>{% trans "Email Limits" %}</span></a></li>
+                <li><a href="{% url 'SpamAssassin' %}" title="{% trans 'SpamAssassin Configurations' %}"><span>{% trans "SpamAssassin" %}</span></a></li>
             </ul>
 
         </div><!-- .sidebar-submenu -->
@@ -689,25 +579,19 @@
             {% block content %}
             {% endblock %}
 
-
         </div>
 
-
-
     </div>
-
-
-
 
 </div>
 
 
-    <!-- WIDGETS -->
+<!-- WIDGETS -->
 
 
 <!-- Sparklines charts -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/custom-js/system-status.js' %}"></script>
+<script src="{% static 'baseTemplate/custom-js/system-status.js' %}"></script>
 <script src="{% static 'packages/packages.js' %}"></script>
 <script src="{% static 'websiteFunctions/websiteFunctions.js' %}"></script>
 <script src="{% static 'tuning/tuning.js' %}"></script>
@@ -718,83 +602,41 @@
 <script src="{% static 'databases/databases.js' %}"></script>
 <script src="{% static 'mailServer/mailServer.js' %}"></script>
 <script src="{% static 'serverLogs/serverLogs.js' %}"></script>
+<script src="{% static 'emailPremium/emailPremium.js' %}"></script>
+
 <!-- PieGage charts -->
 
-
-
-<script type="text/javascript" src="{% static 'baseTemplate/assets/bootstrap/js/bootstrap.js' %}"></script>
-
-<!-- Bootstrap Dropdown -->
-
-<!-- <script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/dropdown/dropdown.js' %}"></script> -->
-
-<!-- Bootstrap Tooltip -->
-
-<!-- <script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/tooltip/tooltip.js' %}"></script> -->
-
-<!-- Bootstrap Popover -->
-
-<!-- <script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/popover/popover.js' %}"></script> -->
+<script type="text/javascript" src="{% static 'baseTemplate/assets/finalJS/final.js' %}"></script>
 
 <!-- Bootstrap Progress Bar -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/progressbar/progressbar.js' %}"></script>
-
-<!-- Bootstrap Buttons -->
-
-<!-- <script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/button/button.js' %}"></script> -->
-
-<!-- Bootstrap Collapse -->
-
-<!-- <script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/collapse/collapse.js' %}"></script> -->
 
 <!-- Superclick -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/superclick/superclick.js' %}"></script>
 
 <!-- Input switch alternate -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/input-switch/inputswitch-alt.js' %}"></script>
-
 <!-- Slim scroll -->
-
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/slimscroll/slimscroll.js' %}"></script>
 
 <!-- Slidebars -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/slidebars/slidebars.js' %}"></script>
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/slidebars/slidebars-demo.js' %}"></script>
 
 <!-- PieGage -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/charts/piegage/piegage.js' %}"></script>
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/charts/piegage/piegage-demo.js' %}"></script>
-
 <!-- Screenfull -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/screenfull/screenfull.js' %}"></script>
 
 <!-- Content box -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/content-box/contentbox.js' %}"></script>
-
 <!-- Overlay -->
-
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/overlay/overlay.js' %}"></script>
 
 <!-- Widgets init for demo -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/js-init/widgets-init.js' %}"></script>
-
 <!-- Theme layout -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/themes/admin/layout.js' %}"></script>
 
 <!-- Theme switcher -->
 
-<script type="text/javascript" src="{% static 'baseTemplate/assets/widgets/theme-switcher/themeswitcher.js' %}"></script>
-
-<script src="{% static 'baseTemplate/percircle.js' %}"></script>
 <script src="{% static 'backup/backup.js' %}"></script>
 <script src="{% static 'managePHP/managePHP.js' %}"></script>
 <script src="{% static 'baseTemplate/bootstrap-toggle.min.js' %}"></script>

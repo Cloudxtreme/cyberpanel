@@ -14,7 +14,7 @@ import subprocess
 import shlex
 import os
 import plogical.CyberCPLogFileWriter as logging
-from django.utils.translation import ugettext,ungettext
+from plogical.virtualHostUtilities import virtualHostUtilities
 # Create your views here.
 
 
@@ -46,14 +46,18 @@ def getAdminStatus(request):
         else:
             admin_type = "Normal User"
 
-        serverIPAddress = "192.168.100.1"
+        # read server IP
 
         try:
-            serverIPAddress = requests.get('https://api.ipify.org').text
-        except:
-            pass
+            ipFile = "/etc/cyberpanel/machineIP"
+            f = open(ipFile)
+            ipData = f.read()
+            serverIPAddress = ipData.split('\n', 1)[0]
+        except BaseException,msg:
+            logging.CyberCPLogFileWriter.writeToFile("Failed to read machine IP, error:" +str(msg))
+            serverIPAddress = "192.168.100.1"
 
-        adminName = administrator.firstName + " " + administrator.lastName
+        adminName = administrator.firstName + " " + administrator.lastName[:3]
 
         adminData = {"admin_type":admin_type,"user_name":adminName,"serverIPAddress":serverIPAddress}
 
@@ -68,40 +72,7 @@ def getSystemStatus(request):
     try:
 
         HTTPData = SystemInformation.getSystemInformation()
-
-        try:
-            command = "sudo cat /tmp/lshttpd/tempReport"
-            logging.CyberCPLogFileWriter.writeToFile(shlex.split(command))
-            data = subprocess.check_output(shlex.split(command)).split("\n")
-
-            httpData = data[3]
-            requestsData = data[4]
-
-            finalHTTP = re.findall(r"[A-Za-z0-9]+", httpData)
-            finalReq = re.findall(r"[A-Za-z0-9]+", requestsData)
-
-
-            HTTPData['RequestProcessing'] = finalReq[4]
-            HTTPData['TotalRequests'] = finalReq[11]
-
-
-            HTTPData['MAXCONN'] = finalHTTP[1]
-            HTTPData['MAXSSL'] = finalHTTP[4]
-            HTTPData['Avail'] = finalHTTP[8]
-            HTTPData['AvailSSL'] = finalHTTP[14]
-
-        except BaseException,msg:
-
-            HTTPData['RequestProcessing'] = 0
-            HTTPData['TotalRequests'] = 0
-
-            HTTPData['MAXCONN'] = 2000
-            HTTPData['MAXSSL'] = 1000
-            HTTPData['Avail'] = 2000
-            HTTPData['AvailSSL'] = 1000
-
         json_data = json.dumps(HTTPData)
-
         return HttpResponse(json_data)
 
     except KeyError:

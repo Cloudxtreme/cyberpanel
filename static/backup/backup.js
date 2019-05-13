@@ -36,7 +36,6 @@ app.controller('backupWebsiteControl', function($scope,$http,$timeout) {
                 };
 
                 $scope.fetchDetails = function () {
-
                   getBackupStatus();
                   populateCurrentRecords();
                   $scope.destination = false;
@@ -71,10 +70,9 @@ app.controller('backupWebsiteControl', function($scope,$http,$timeout) {
                 function ListInitialDatas(response) {
 
 
-                    if(response.data.backupStatus == 1){
+                    if(response.data.backupStatus === 1){
 
                         if(response.data.abort === 1){
-
                             $timeout.cancel();
                             $scope.backupLoadingBottom = true;
                             $scope.destination = false;
@@ -108,11 +106,7 @@ app.controller('backupWebsiteControl', function($scope,$http,$timeout) {
                     }
 
                 }
-                function cantLoadInitialDatas(response) {
-
-
-
-                }
+                function cantLoadInitialDatas(response) {}
 
            };
 
@@ -147,22 +141,12 @@ app.controller('backupWebsiteControl', function($scope,$http,$timeout) {
 
 
                     if(response.data.fetchStatus == 1){
-
                         $scope.records = JSON.parse(response.data.data);
-
-
-
                     }
-                    else{
-
-                    }
-
-                }
-                function cantLoadInitialDatas(response) {
-
 
 
                 }
+                function cantLoadInitialDatas(response) {}
 
            };
 
@@ -195,7 +179,7 @@ app.controller('backupWebsiteControl', function($scope,$http,$timeout) {
                 function ListInitialDatas(response) {
 
 
-                    if(response.data.metaStatus == 1){
+                    if(response.data.metaStatus === 1){
                         getBackupStatus();
                     }
 
@@ -1090,7 +1074,7 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
 
         function ListInitialDatas(response) {
 
-            if (response.data.status == 1) {
+            if (response.data.status === 1) {
                 $scope.records = JSON.parse(response.data.data);
                 var parsed = JSON.parse(response.data.data);
 
@@ -1144,7 +1128,7 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
         }
 
     };
-    
+
     $scope.startTransfer = function () {
 
         // notifications boxes
@@ -1165,7 +1149,6 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
         // disable fetch accounts button
 
         $scope.fetchAccountsBtn = true;
-
         $scope.backupLoading = false;
 
         var IPAddress = $scope.IPAddress;
@@ -1190,7 +1173,7 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
 
         function ListInitialDatas(response) {
 
-            if (response.data.remoteTransferStatus == 1) {
+            if (response.data.remoteTransferStatus === 1) {
                     tempTransferDir = response.data.dir;
                     $scope.accountsInRemoteServerTable = true;
 
@@ -1251,8 +1234,6 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
 
     };
 
-
-
     function getBackupStatus(password) {
 
         url = "/backup/getRemoteTransferStatus";
@@ -1260,7 +1241,7 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
         var data = {
             password : $scope.password,
             ipAddress: $scope.IPAddress,
-            dir: tempTransferDir,
+            dir: tempTransferDir
         };
 
         var config = {
@@ -1274,9 +1255,9 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
 
         function ListInitialDatas(response) {
 
-            if (response.data.remoteTransferStatus == 1) {
+            if (response.data.remoteTransferStatus === 1) {
 
-                if(response.data.backupsSent == 0){
+                if(response.data.backupsSent === 0){
                     $scope.backupStatus = false;
                     $scope.requestData = response.data.status;
                     $timeout(getBackupStatus, 2000);
@@ -1284,7 +1265,9 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
                 else{
                     $scope.requestData = response.data.status;
                     $timeout.cancel();
-                    $scope.backupLoading = true;
+
+                    // Start the restore of remote backups that are transferred to local server
+
                     remoteBackupRestore();
                 }
             }
@@ -1334,7 +1317,7 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
 
         function ListInitialDatas(response) {
 
-            if (response.data.remoteRestoreStatus == 1) {
+            if (response.data.remoteRestoreStatus === 1) {
                     localRestoreStatus();
             }
         }
@@ -1346,6 +1329,7 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
                 $scope.errorMessage = true;
                 $scope.accountsFetched = true;
                 $scope.notificationsBox = false;
+                $scope.backupLoading = true;
         }
 
         ///////////////
@@ -1373,9 +1357,9 @@ app.controller('remoteBackupControl', function($scope, $http, $timeout) {
 
         function ListInitialDatas(response) {
 
-            if (response.data.remoteTransferStatus == 1) {
+            if (response.data.remoteTransferStatus === 1) {
 
-                if(response.data.complete == 0){
+                if(response.data.complete === 0){
                     $scope.backupStatus = false;
                     $scope.restoreData = response.data.status;
                     $timeout(localRestoreStatus, 2000);

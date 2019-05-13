@@ -24,7 +24,6 @@ def verifyLogin(request):
         username = "not logged in"
         password = ""
 
-
         try:
             if request.method == "POST":
                 data = json.loads(request.body)
@@ -61,6 +60,26 @@ def verifyLogin(request):
                         settings.LANGUAGE_CODE = user_Language
                     elif data['languageSelection'] == "Bosnian":
                         user_Language = "bs"
+                        request.session[LANGUAGE_SESSION_KEY] = user_Language
+                        request.COOKIES['django_language'] = user_Language
+                        settings.LANGUAGE_CODE = user_Language
+                    elif data['languageSelection'] == "Greek":
+                        user_Language = "gr"
+                        request.session[LANGUAGE_SESSION_KEY] = user_Language
+                        request.COOKIES['django_language'] = user_Language
+                        settings.LANGUAGE_CODE = user_Language
+                    elif data['languageSelection'] == "Russian":
+                        user_Language = "ru"
+                        request.session[LANGUAGE_SESSION_KEY] = user_Language
+                        request.COOKIES['django_language'] = user_Language
+                        settings.LANGUAGE_CODE = user_Language
+                    elif data['languageSelection'] == "Turkish":
+                        user_Language = "tr"
+                        request.session[LANGUAGE_SESSION_KEY] = user_Language
+                        request.COOKIES['django_language'] = user_Language
+                        settings.LANGUAGE_CODE = user_Language
+                    elif data['languageSelection'] == "Spanish":
+                        user_Language = "es"
                         request.session[LANGUAGE_SESSION_KEY] = user_Language
                         request.COOKIES['django_language'] = user_Language
                         settings.LANGUAGE_CODE = user_Language
@@ -105,7 +124,6 @@ def loadLoginPage(request):
 
         numberOfAdministrator = Administrator.objects.count()
 
-
         password = hashPassword.hash_password('1234567')
 
         if numberOfAdministrator == 0:
@@ -114,7 +132,7 @@ def loadLoginPage(request):
                                   firstName="Cyber",lastName="Panel")
             admin.save()
 
-            vers = version(currentVersion="1.6",build=0)
+            vers = version(currentVersion="1.7",build=0)
             vers.save()
 
             package = Package(admin=admin, packageName="Default", diskSpace=1000,

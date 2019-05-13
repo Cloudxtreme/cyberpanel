@@ -54,6 +54,7 @@
                                         <option>PHP 5.6</option>
                                         <option>PHP 7.0</option>
                                         <option>PHP 7.1</option>
+                                        <option>PHP 7.2</option>
                                 </select>
                             </div>
                              <img ng-hide="loadingPHP" src="{% static 'images/loading.gif' %}">
@@ -111,6 +112,13 @@
                     <label class="col-sm-3 control-label">{% trans "upload_max_filesize" %}</label>
                     <div class="col-sm-6">
                         <input ng-model="upload_max_filesize"  type="text" class="form-control" required>
+                    </div>
+                </div>
+
+                <div ng-hide="phpDetailsBox" class="form-group">
+                    <label class="col-sm-3 control-label">{% trans "post_max_size" %}</label>
+                    <div class="col-sm-6">
+                        <input ng-model="post_max_size"  type="text" class="form-control" required>
                     </div>
                 </div>
 
@@ -180,6 +188,7 @@
                                                 <option>PHP 5.6</option>
                                                 <option>PHP 7.0</option>
                                                 <option>PHP 7.1</option>
+                                                <option>PHP 7.2</option>
                                         </select>
                                     </div>
                                     <img ng-hide="loadingPHP" src="{% static 'images/loading.gif' %}">

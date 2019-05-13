@@ -50,9 +50,6 @@ def viewProfile(request):
         else:
             AdminData['type'] = "User"
 
-
-
-
         return render(request, 'userManagment/userProfile.html',AdminData)
     except KeyError:
         return redirect(loadLoginPage)
@@ -65,7 +62,7 @@ def createUser(request):
         admin = Administrator.objects.get(pk=userID)
 
         if admin.type == 3:
-            return HttpResponse("You don't have enough priviliges to access this page.")
+            return HttpResponse("You don't have enough privileges to access this page.")
 
         try:
             adminType = admin.type
@@ -78,7 +75,6 @@ def createUser(request):
 
     except KeyError:
         return redirect(loadLoginPage)
-
 
 
 def submitUserCreation(request):
@@ -140,7 +136,6 @@ def submitUserCreation(request):
                     return HttpResponse(final_json)
 
                 elif accountType == "Normal User":
-                    websitesLimit = data['websitesLimit']
 
                     newAdmin = Administrator(firstName=firstName,
                                             lastName=lastName,
@@ -148,7 +143,7 @@ def submitUserCreation(request):
                                             type=3,
                                             userName=userName,
                                             password=password,
-                                            initWebsitesLimit=websitesLimit,
+                                            initWebsitesLimit=0,
                                             owner=currentAdmin.pk
                                             )
                     newAdmin.save()
@@ -161,7 +156,7 @@ def submitUserCreation(request):
                     return HttpResponse(final_json)
                 else:
                     websitesLimit = data['websitesLimit']
-                    userAccountsLimit = data['userAccountsLimit']
+                    userAccountsLimit = 0
 
                     newAdmin = Administrator(firstName=firstName,
                                              lastName=lastName,
@@ -197,28 +192,25 @@ def modifyUsers(request):
         userID = request.session['userID']
 
         admin = Administrator.objects.get(pk=userID)
-
-        if admin.type == 3:
-            return HttpResponse("You don't have enough priviliges to access this page.")
+        adminNames = []
 
         if admin.type == 1:
             admins = Administrator.objects.all()
-            adminNames = []
             adminType = 1
             for items in admins:
                 adminNames.append(items.userName)
-        else:
+        elif admin.type == 2:
             admins = Administrator.objects.filter(owner=admin.pk)
-            adminNames = []
             adminType = 2
             for items in admins:
                 adminNames.append(items.userName)
+        else:
+            adminType = 3
+            adminNames.append(admin.userName)
 
         return render(request, 'userManagment/modifyUser.html',{"acctNames":adminNames,"adminType":adminType})
     except KeyError:
         return redirect(loadLoginPage)
-
-
 
 def fetchUserDetails(request):
     try:
@@ -272,7 +264,6 @@ def fetchUserDetails(request):
         return HttpResponse(json_data)
 
 
-
 def saveModifications(request):
     try:
         val = request.session['userID']
@@ -285,10 +276,17 @@ def saveModifications(request):
                 lastName = data['lastName']
                 email = data['email']
 
-
+                admin = Administrator.objects.get(pk=val)
                 user = Administrator.objects.get(userName=accountUsername)
 
                 password = hashPassword.hash_password(data['password'])
+
+                if admin.type != 1:
+                    if admin != user:
+                        data_ret = {'saveStatus': 1, 'error_message': 'Not enough privileges'}
+                        json_data = json.dumps(data_ret)
+                        return HttpResponse(json_data)
+
 
                 if user.type == 1:
                     userAccountsLimit = 0
@@ -311,8 +309,8 @@ def saveModifications(request):
 
 
                 if data['accountType'] == "Reseller":
-                    userAccountsLimit = data['userAccountsLimit']
-                    websitesLimit = data['websitesLimit']
+                    userAccountsLimit = 0
+                    websitesLimit = 0
 
                     user.firstName = firstName
                     user.lastName = lastName
@@ -325,13 +323,12 @@ def saveModifications(request):
                     user.save()
 
                 elif data['accountType'] == "Normal User":
-                    websitesLimit = data['websitesLimit']
 
                     user.firstName = firstName
                     user.lastName = lastName
                     user.email = email
                     user.password = password
-                    user.initWebsitesLimit = websitesLimit
+                    user.initWebsitesLimit = 0
                     user.type = 3
 
                     user.save()
@@ -373,7 +370,7 @@ def deleteUser(request):
         admin = Administrator.objects.get(pk=userID)
 
         if admin.type == 3:
-            return HttpResponse("You don't have enough priviliges to access this page.")
+            return HttpResponse("You don't have enough privileges to access this page.")
 
         if admin.type == 1:
             admins = Administrator.objects.all()
@@ -400,13 +397,19 @@ def submitUserDeletion(request):
                 data = json.loads(request.body)
                 accountUsername = data['accountUsername']
 
+                admin = Administrator.objects.get(pk=val)
 
-                user = Administrator.objects.get(userName=accountUsername)
-                user.delete()
+                if admin.type == 1:
+                    user = Administrator.objects.get(userName=accountUsername)
+                    user.delete()
 
-                data_ret = {'deleteStatus': 1, 'error_message': 'None'}
-                json_data = json.dumps(data_ret)
-                return HttpResponse(json_data)
+                    data_ret = {'deleteStatus': 1, 'error_message': 'None'}
+                    json_data = json.dumps(data_ret)
+                    return HttpResponse(json_data)
+                else:
+                    data_ret = {'deleteStatus': 1, 'error_message': 'Not enough privileges'}
+                    json_data = json.dumps(data_ret)
+                    return HttpResponse(json_data)
 
 
 

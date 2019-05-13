@@ -15,6 +15,17 @@ class CyberCPLogFileWriter:
             return "Can not write to error file."
 
     @staticmethod
+    def writeforCLI(message, level, method):
+        try:
+            file = open(CyberCPLogFileWriter.fileName, 'a')
+            file.writelines("[" + time.strftime(
+                "%I-%M-%S-%a-%b-%Y") + "] [" + level + ":" + method + "] " + message + "\n")
+            file.close()
+            file.close()
+        except IOError:
+            return "Can not write to error file!"
+
+    @staticmethod
     def readLastNFiles(numberOfLines,fileName):
         try:
 

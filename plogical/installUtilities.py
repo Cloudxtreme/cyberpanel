@@ -143,17 +143,7 @@ class installUtilities:
 
             cmd = shlex.split(command)
 
-            res = subprocess.call(cmd)
-
-            if res == 1:
-                print("###############################################")
-                print("         Could not restart Litespeed serve     ")
-                print("###############################################")
-                sys.exit()
-            else:
-                print("###############################################")
-                print("          Litespeed Re-Started                 ")
-                print("###############################################")
+            res = subprocess.call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
 
 
         except OSError, msg:

@@ -59,11 +59,10 @@ app.controller('installExtensions', function($scope,$http,$timeout) {
                 function ListInitialDatas(response) {
 
 
-                    if(response.data.extensionRequestStatus == 1){
+                    if(response.data.extensionRequestStatus === 1){
 
                         getRequestStatus();
                         $scope.canNotPerform = true;
-
 
 
                     }
@@ -170,7 +169,7 @@ app.controller('installExtensions', function($scope,$http,$timeout) {
                 function ListInitialDatas(response) {
 
 
-                    if(response.data.fetchStatus == 1){
+                    if(response.data.fetchStatus === 1){
 
                         $scope.records = JSON.parse(response.data.data);
 
@@ -225,9 +224,9 @@ app.controller('installExtensions', function($scope,$http,$timeout) {
                 function ListInitialDatas(response) {
 
 
-                    if(response.data.extensionRequestStatus == 1){
+                    if(response.data.extensionRequestStatus === 1){
 
-                        if(response.data.finished==1){
+                        if(response.data.finished === 1){
 
                             $scope.loadingExtensions = true;
                             $scope.phpSelectionDisabled = false;
@@ -288,20 +287,20 @@ app.controller('editPHPConfig', function($scope,$http,$timeout) {
 
            $('#allow_url_fopen').change(function() {
                 allow_url_fopen = $(this).prop('checked');
-           })
+           });
 
             $('#display_errors').change(function() {
                 display_errors = $(this).prop('checked');
-           })
+           });
 
 
             $('#file_uploads').change(function() {
                 file_uploads = $(this).prop('checked');
-           })
+           });
 
             $('#allow_url_include').change(function() {
                 allow_url_include = $(this).prop('checked');
-           })
+           });
 
 
 
@@ -362,6 +361,7 @@ app.controller('editPHPConfig', function($scope,$http,$timeout) {
                         $scope.max_execution_time = response.data.max_execution_time;
                         $scope.upload_max_filesize = response.data.upload_max_filesize;
                         $scope.max_input_time = response.data.max_input_time;
+                        $scope.post_max_size = response.data.post_max_size;
 
                         $scope.phpDetailsBox = false;
 
@@ -407,6 +407,7 @@ app.controller('editPHPConfig', function($scope,$http,$timeout) {
                             max_execution_time:$scope.max_execution_time,
                             upload_max_filesize:$scope.upload_max_filesize,
                             max_input_time:$scope.max_input_time,
+                            post_max_size: $scope.post_max_size,
                         };
 
                         var config = {
@@ -423,7 +424,7 @@ app.controller('editPHPConfig', function($scope,$http,$timeout) {
                 function ListInitialDatas(response) {
 
 
-                    if(response.data.saveStatus == 1){
+                    if(response.data.saveStatus === 1){
 
                         $scope.detailsSaved = false;
                         $scope.loadingPHP = true;

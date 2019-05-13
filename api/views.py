@@ -8,19 +8,16 @@ from plogical.virtualHostUtilities import virtualHostUtilities
 from plogical import hashPassword
 from plogical.installUtilities import installUtilities
 from packages.models import Package
-import shutil
-from plogical.mysqlUtilities import mysqlUtilities
-from databases.models import Databases
 from baseTemplate.views import renderBase
 from random import randint
 from websiteFunctions.models import Websites,ChildDomains
 import os
-import signal
-from plogical.CyberCPLogFileWriter import CyberCPLogFileWriter as logging
-from shutil import rmtree
 from baseTemplate.models import version
 import subprocess
 import shlex
+import re
+from plogical.mailUtilities import mailUtilities
+from plogical.CyberCPLogFileWriter import CyberCPLogFileWriter as logging
 # Create your views here.
 
 
@@ -31,7 +28,6 @@ def verifyConn(request):
             data = json.loads(request.body)
             adminUser = data['adminUser']
             adminPass = data['adminPass']
-
 
             admin = Administrator.objects.get(userName=adminUser)
 
@@ -62,16 +58,11 @@ def createWebsite(request):
             packageName = data['packageName']
             websiteOwner = data['websiteOwner']
             ownerPassword = data['ownerPassword']
+            externalApp = "".join(re.findall("[a-zA-Z]+", domain))[:7]
+            data['ssl'] = 0
+            data['dkimCheck'] = 0
+            data['openBasedir'] = 1
 
-
-            try:
-                website = Websites.objects.get(domain=domain)
-                data_ret = {"existsStatus": 0, 'createWebSiteStatus': 0,
-                            'error_message': "Website Already Exists"}
-                json_data = json.dumps(data_ret)
-                return HttpResponse(json_data)
-            except:
-                pass
 
             phpSelection = "PHP 7.0"
 
@@ -97,48 +88,35 @@ def createWebsite(request):
                 pass
 
 
-            if virtualHostUtilities.checkIfVirtualHostExists(domain) == 1:
-                data_ret = {"existsStatus": 1, 'createWebSiteStatus': 0,
-                            'error_message': "This domain already exists in Litespeed Configurations, first delete the domain to perform sweap."}
+            ## Create Configurations
+
+            numberOfWebsites = str(Websites.objects.count() + ChildDomains.objects.count())
+            sslpath = "/home/" + domain + "/public_html"
+
+            ## Create Configurations
+
+            execPath = "sudo python " + virtualHostUtilities.cyberPanel + "/plogical/virtualHostUtilities.py"
+
+            execPath = execPath + " createVirtualHost --virtualHostName " + domain + \
+                       " --administratorEmail " + adminEmail + " --phpVersion '" + phpSelection + \
+                       "' --virtualHostUser " + externalApp + " --numberOfSites " + numberOfWebsites + \
+                       " --ssl " + str(data['ssl']) + " --sslPath " + sslpath + " --dkimCheck " + str(data['dkimCheck']) \
+                       + " --openBasedir " + str(data['openBasedir']) + ' --websiteOwner ' + websiteOwner \
+                       + ' --package ' + packageName
+
+            output = subprocess.check_output(shlex.split(execPath))
+
+            if output.find("1,None") > -1:
+                data_ret = {'createWebSiteStatus': 1, 'error_message': "None", "existsStatus": 0}
+                json_data = json.dumps(data_ret)
+                return HttpResponse(json_data)
+            else:
+                data_ret = {'createWebSiteStatus': 0, 'error_message': output, "existsStatus": 0}
                 json_data = json.dumps(data_ret)
                 return HttpResponse(json_data)
 
-            if virtualHostUtilities.createDirectoryForVirtualHost(domain, adminEmail, phpSelection) != 1:
-                numberOfWebsites = Websites.objects.count()+ChildDomains.objects.count()
-                virtualHostUtilities.deleteVirtualHostConfigurations(domain, numberOfWebsites)
-                data_ret = {"existsStatus": 1, 'createWebSiteStatus': 0,
-                            'error_message': "Can not create configurations, see CyberCP main log file."}
-                json_data = json.dumps(data_ret)
-                return HttpResponse(json_data)
-
-            if virtualHostUtilities.createConfigInMainVirtualHostFile(domain) != 1:
-                numberOfWebsites = Websites.objects.count()+ChildDomains.objects.count()
-                virtualHostUtilities.deleteVirtualHostConfigurations(domain, numberOfWebsites)
-                data_ret = {"existsStatus": 1, 'createWebSiteStatus': 0,
-                            'error_message': "Can not create configurations, see CyberCP main log file."}
-                json_data = json.dumps(data_ret)
-                return HttpResponse(json_data)
-
-            installUtilities.reStartLiteSpeed()
-
-            selectedPackage = Package.objects.get(packageName=packageName)
-
-            websiteOwn = Administrator.objects.get(userName=websiteOwner)
-
-            website = Websites(admin=websiteOwn, package=selectedPackage, domain=domain, adminEmail=adminEmail,
-                               phpSelection=phpSelection, ssl=0)
-
-            website.save()
-
-            shutil.copy("/usr/local/CyberCP/index.html", "/home/" + domain + "/public_html/index.html")
-
-            data_ret = {'createWebSiteStatus': 1, 'error_message': "None", "existsStatus": 0}
-            json_data = json.dumps(data_ret)
-            return HttpResponse(json_data)
 
     except BaseException, msg:
-        numberOfWebsites = Websites.objects.count()+ChildDomains.objects.count()
-        virtualHostUtilities.deleteVirtualHostConfigurations(domain, numberOfWebsites)
         data_ret = {'createWebSiteStatus': 0, 'error_message': str(msg), "existsStatus": 0}
         json_data = json.dumps(data_ret)
         return HttpResponse(json_data)
@@ -238,19 +216,23 @@ def deleteWebsite(request):
                 json_data = json.dumps(data_ret)
                 return HttpResponse(json_data)
 
-            numberOfWebsites = Websites.objects.count()
+            website = Websites.objects.get(domain=websiteName)
+            websiteOwner = website.admin
 
-            virtualHostUtilities.deleteVirtualHostConfigurations(websiteName, numberOfWebsites)
+            if admin.websites_set.all().count() == 0:
+                websiteOwner.delete()
 
-            delWebsite = Websites.objects.get(domain=websiteName)
-            databases = Databases.objects.filter(website=delWebsite)
+            ## Deleting master domain
 
-            for items in databases:
-                mysqlUtilities.deleteDatabase(items.dbName, items.dbUser)
+            numberOfWebsites = str(Websites.objects.count() + ChildDomains.objects.count())
 
-            delWebsite.delete()
 
-            installUtilities.reStartLiteSpeed()
+            execPath = "sudo python " + virtualHostUtilities.cyberPanel + "/plogical/virtualHostUtilities.py"
+
+            execPath = execPath + " deleteVirtualHostConfigurations --virtualHostName " + websiteName + \
+                       " --numberOfSites " + numberOfWebsites
+
+            subprocess.check_output(shlex.split(execPath))
 
             data_ret = {'websiteDeleteStatus': 1, 'error_message': "None"}
             json_data = json.dumps(data_ret)
@@ -260,7 +242,6 @@ def deleteWebsite(request):
         data_ret = {'websiteDeleteStatus': 0, 'error_message': str(msg)}
         json_data = json.dumps(data_ret)
         return HttpResponse(json_data)
-
 
 def submitWebsiteStatus(request):
     try:
@@ -325,7 +306,6 @@ def loginAPI(request):
         return HttpResponse(json_data)
 
 
-
 def fetchSSHkey(request):
     try:
         if request.method == "POST":
@@ -337,24 +317,24 @@ def fetchSSHkey(request):
 
             if hashPassword.check_password(admin.password, password):
 
-                keyPath = "/root/.ssh"
-                pubKey = keyPath + "/cyberpanel.pub"
-
+                pubKey = os.path.join("/root",".ssh",'cyberpanel.pub')
                 execPath = "sudo cat " + pubKey
-
-
-
                 data = subprocess.check_output(shlex.split(execPath))
 
-
-                data_ret = {'pubKeyStatus': 1, 'error_message': "None", "pubKey":data}
+                data_ret = {
+                            'pubKeyStatus': 1,
+                            'error_message': "None",
+                            'pubKey':data
+                            }
                 json_data = json.dumps(data_ret)
                 return HttpResponse(json_data)
             else:
-                data_ret = {'pubKeyStatus': 0, 'error_message': "Invalid Credentials"}
+                data_ret = {
+                            'pubKeyStatus': 0,
+                            'error_message': "Could not authorize access to API."
+                            }
                 json_data = json.dumps(data_ret)
                 return HttpResponse(json_data)
-
 
     except BaseException, msg:
         data = {'pubKeyStatus': 0,'error_message': str(msg)}
@@ -378,32 +358,32 @@ def remoteTransfer(request):
 
                 ##
 
-                accountsToTransfer = ','.join(accountsToTransfer)
+                mailUtilities.checkHome()
+                path = "/home/cyberpanel/accounts-" + str(randint(1000, 9999))
+                writeToFile = open(path,'w')
+
+                for items in accountsToTransfer:
+                    writeToFile.writelines(items + "\n")
+                writeToFile.close()
+
+                ## Accounts to transfer is a path to file, containing accounts.
 
                 execPath = "sudo python " + virtualHostUtilities.cyberPanel + "/plogical/remoteTransferUtilities.py"
-
-                execPath = execPath + " remoteTransfer --ipAddress " + ipAddress + " --dir " + dir + " --accountsToTransfer " + accountsToTransfer
-
-
-
+                execPath = execPath + " remoteTransfer --ipAddress " + ipAddress + " --dir " + dir + " --accountsToTransfer " + path
                 subprocess.Popen(shlex.split(execPath))
 
                 return HttpResponse(json.dumps({"transferStatus": 1, "dir": dir}))
 
                 ##
             else:
-                data_ret = {'transferStatus': 0, 'error_message': "Invalid Credentials"}
+                data_ret = {'transferStatus': 0, 'error_message': "Could not authorize access to API."}
                 json_data = json.dumps(data_ret)
                 return HttpResponse(json_data)
-
-
-
 
     except BaseException, msg:
         data = {'transferStatus': 0,'error_message': str(msg)}
         json_data = json.dumps(data)
         return HttpResponse(json_data)
-
 
 def fetchAccountsFromRemoteServer(request):
     try:
@@ -455,6 +435,7 @@ def FetchRemoteTransferStatus(request):
             data = json.loads(request.body)
             username = data['username']
             password = data['password']
+
             dir = "/home/backup/transfer-"+str(data['dir'])+"/backup_log"
 
             try:
@@ -493,27 +474,21 @@ def cancelRemoteTransfer(request):
 
             if hashPassword.check_password(admin.password, password):
 
-                if os.path.exists(dir):
+                path = dir + "/pid"
 
-                    path = dir+"/pid"
+                command = "sudo cat " + path
+                pid = subprocess.check_output(shlex.split(command))
 
-                    pid = open(path, "r").readlines()[0]
+                command = "sudo kill -KILL " + pid
+                subprocess.call(shlex.split(command))
 
-                    try:
-                        os.kill(int(pid), signal.SIGKILL)
-                    except BaseException, msg:
-                        logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [cancelRemoteTransfer]")
+                command = "sudo rm -rf " + dir
+                subprocess.call(shlex.split(command))
 
-                    rmtree(dir)
+                data = {'cancelStatus': 1, 'error_message': "None"}
+                json_data = json.dumps(data)
+                return HttpResponse(json_data)
 
-                    data = {'cancelStatus': 1, 'error_message': "None"}
-                    json_data = json.dumps(data)
-                    return HttpResponse(json_data)
-
-                else:
-                    data = {'cancelStatus': 1, 'error_message': "None"}
-                    json_data = json.dumps(data)
-                    return HttpResponse(json_data)
             else:
                 data_ret = {'cancelStatus': 0, 'error_message': "Invalid Credentials"}
                 json_data = json.dumps(data_ret)
@@ -524,7 +499,6 @@ def cancelRemoteTransfer(request):
         data = {'cancelStatus': 1, 'error_message': str(msg)}
         json_data = json.dumps(data)
         return HttpResponse(json_data)
-
 
 def cyberPanelVersion(request):
     try:
@@ -542,22 +516,28 @@ def cyberPanelVersion(request):
 
                 Version = version.objects.get(pk=1)
 
-                data_ret = {"getVersion": 1,
-                            'error_message': "Could not authorize access to API",
+                data_ret = {
+                            "getVersion": 1,
+                            'error_message': "none",
                             'currentVersion':Version.currentVersion,
-                            'build':Version.build}
+                            'build':Version.build
+                            }
 
                 json_data = json.dumps(data_ret)
                 return HttpResponse(json_data)
             else:
-                data_ret = {"getVersion": 0,
-                            'error_message': "Could not authorize access to API"}
+                data_ret = {
+                            "getVersion": 0,
+                            'error_message': "Could not authorize access to API."
+                            }
                 json_data = json.dumps(data_ret)
                 return HttpResponse(json_data)
 
     except BaseException, msg:
-        data_ret = {"getVersion": 0,
-                    'error_message': "Could not authorize access to API"}
+        data_ret = {
+                    "getVersion": 0,
+                    'error_message': str(msg)
+                    }
         json_data = json.dumps(data_ret)
         return HttpResponse(json_data)
 

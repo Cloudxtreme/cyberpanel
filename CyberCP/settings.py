@@ -24,7 +24,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'xr%j*p!*$0d%(-(e%@-*hyoz4$f%y77coq0u)6pwmjg4)q&19f'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'manageSSL',
     'api',
     'filemanager',
+    'emailPremium'
 ]
 
 MIDDLEWARE = [
@@ -69,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'CyberCP.secMiddleware.secMiddleware'
 ]
 
 ROOT_URLCONF = 'CyberCP.urls'
@@ -102,7 +104,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'cyberpanel',
         'USER': 'cyberpanel',
-        'PASSWORD': 'jFzZwX3fFyYrCo',
+        'PASSWORD': 'Bz9gF7Hr7X4RtD',
         'HOST': '127.0.0.1',
         'PORT':'3307'
     },
@@ -110,10 +112,10 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'mysql',
         'USER': 'root',
-        'PASSWORD': 'b1w3wHi5x0o8t9',
+        'PASSWORD': 'sXm5VlRaAsXkDd',
         'HOST': 'localhost',
         'PORT': '',
-    }
+    },
 }
 
 DATABASE_ROUTERS = ['backup.backupRouter.backupRouter']
@@ -170,5 +172,8 @@ LANGUAGES = (
     ('pt', _('Portuguese')),
     ('ja', _('Japanese')),
     ('bs', _('Bosnian')),
+    ('gr', _('Greek')),
+    ('ru', _('Russian')),
+    ('tr', _('Turkish')),
+    ('es', _('Spanish')),
 )
-

@@ -15,6 +15,7 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
     var aceEditorMode = '';
 
     var domainName = window.location.pathname.split("/")[2];
+    var domainRandomSeed = "";
 
     var homePathBack = "/home/"+domainName;
     $scope.currentPath = "/home/"+domainName;
@@ -67,7 +68,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
 
         var data = {
             completeStartingPath : completePath,
-            method : "list"
+            method : "list",
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -117,7 +120,6 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
     function finalPrepration(parentNode, path,completePath,dropDown){
         parentNode.appendChild(prepareChildNodeLI(path,completePath,dropDown));
     }
-
 
     function prepareChildNodeLI(path,completePath,dropDown){
 
@@ -350,7 +352,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
          <td>26KB</td>
          <td>26 Oct</td>
          <td>775</td>
+         <td>Folder/File</td>
      </tr>
+
      */
 
     function createTR(fileName,fileSize,lastModified,permissions,dirCheck){
@@ -360,6 +364,8 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         var fileSizeNode = document.createTextNode(fileSize);
         var lastModifiedNode = document.createTextNode(lastModified);
         var permissionsNode = document.createTextNode(permissions);
+
+
 
 
         //
@@ -381,6 +387,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         var secondTDNode = document.createElement('td');
         var thirdTDNode = document.createElement('td');
         var forthTDNode = document.createElement('td');
+        var fifthTDNode = document.createElement('td');
+
+        fifthTDNode.style.display = "none";
 
         //
 
@@ -405,26 +414,37 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             trNode.addEventListener("dblclick", function(){ $scope.fetchForTableSecondary(firstTDNode,"doubleClick");});
             trNode.addEventListener("click", function(){ addFileOrFolderToList(trNode);});
             trNode.addEventListener("contextmenu", function(event){$scope.rightClickCallBack(event,trNode);});
+
+            // Hidden td to represent file or folder
+
+            var fileOrFolderNode = document.createTextNode("Folder");
+            fifthTDNode.appendChild(fileOrFolderNode)
         }
         else{
             thNode.appendChild(iNodeFile);
             trNode.appendChild(thNode);
             trNode.addEventListener("click", function(){ addFileOrFolderToList(trNode);});
             trNode.addEventListener("contextmenu", function(event){ $scope.rightClickCallBack(event,trNode); });
+
+            // Hidden td to represent file or folder
+
+            var fileOrFolderNode = document.createTextNode("File");
+            fifthTDNode.appendChild(fileOrFolderNode)
         }
 
         trNode.appendChild(firstTDNode);
         trNode.appendChild(secondTDNode);
         trNode.appendChild(thirdTDNode);
         trNode.appendChild(forthTDNode);
+        trNode.appendChild(fifthTDNode);
 
         return trNode;
 
     }
-    
-    
+
+
     // Button Activator
-    
+
     $scope.buttonActivator = function () {
 
         // for edit button
@@ -582,6 +602,8 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
 
     // table functions
 
+
+
     $scope.fetchForTableSecondary = function(node,functionName) {
 
         allFilesAndFolders = [];
@@ -616,7 +638,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         var data = {
             completeStartingPath : completePathToFile,
             method : "listForTable",
-            home: homePathBack
+            home: homePathBack,
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
         var tableBody = document.getElementById("tableBodyFiles");
@@ -650,6 +674,11 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
                         var fileSize = filesData[keys[i]][3];
                         var permissions = filesData[keys[i]][4];
                         var dirCheck = filesData[keys[i]][5];
+                        console.log(fileName);
+                        if(fileName === "..filemanagerkey"){
+
+                                continue;
+                        }
                         tableBody.appendChild(createTR(fileName,fileSize,lastModified,permissions,dirCheck));
 
                     }
@@ -666,11 +695,50 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         }
 
     };
-    $scope.fetchForTableSecondary(null,"startPoint");
 
     function findFileExtension(fileName){
         return (/[.]/.exec(fileName)) ? /[^.]+$/.exec(fileName) : undefined;
     }
+
+    // Create entry point for domain
+
+    function createEntryPoint(){
+
+        url = "/filemanager/createTemporaryFile";
+
+                var data = {
+                    domainName:domainName
+                };
+
+                var config = {};
+
+                $http.post(url, data,config).then(ListInitialDatas, cantLoadInitialDatas);
+
+
+                function ListInitialDatas(response) {
+
+                    if(response.data.createTemporaryFile === 1){
+                        domainRandomSeed = response.data.domainRandomSeed;
+                        $scope.fetchForTableSecondary(null,"startPoint");
+                    }
+                    else
+                    {
+                        var notification = alertify.notify(response.data.error_message, 'error', 10, function(){  console.log('dismissed'); });
+                    }
+                }
+                function cantLoadInitialDatas(response) {
+                        var notification = alertify.notify("Could not connec to server, refresh page.", 'error', 10, function(){  console.log('dismissed'); });
+                }
+
+
+
+
+
+
+    }
+    createEntryPoint();
+
+
 
 
     // html editor
@@ -682,7 +750,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
 
         var data = {
             fileName : completePathForFile,
-            method : "readFileContents"
+            method : "readFileContents",
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -722,7 +792,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         var data = {
             fileName : completePathForFile,
             method : "writeFileContents",
-            fileContent: editor.getValue()
+            fileContent: editor.getValue(),
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -774,7 +846,13 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
 
     uploader.onAfterAddingFile = function(fileItem) {
         $scope.errorMessage = true;
-        fileItem.formData.push({"completePath":$scope.currentPath});
+        fileItem.formData.push(
+            {
+                "completePath":$scope.currentPath,
+                domainRandomSeed:domainRandomSeed,
+                domainName: domainName
+
+            });
     };
 
     // folder functions
@@ -807,6 +885,8 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         var data = {
             folderName : completePathForFolder,
             method : "createNewFolder",
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -856,6 +936,8 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         var data = {
             fileName : completePathForFile,
             method : "createNewFile",
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -898,6 +980,8 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             path : $scope.currentPath,
             method : "deleteFolderOrFile",
             fileAndFolders: allFilesAndFolders,
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -946,7 +1030,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             listOfFiles : allFilesAndFolders,
             compressedFileName: $scope.compressedFileName,
             compressionType: $scope.compressionType,
-            method: 'compress'
+            method: 'compress',
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -1001,7 +1087,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             fileToExtract: completeFileToExtract,
             extractionType: extractionType,
             extractionLocation: $scope.extractionLocation,
-            method: 'extract'
+            method: 'extract',
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -1053,7 +1141,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             basePath : $scope.currentPath,
             newPath : $scope.pathToMoveTo,
             fileAndFolders:allFilesAndFolders,
-            method: 'move'
+            method: 'move',
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -1104,7 +1194,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             basePath : $scope.currentPath,
             newPath : $scope.pathToCopyTo,
             fileAndFolders:allFilesAndFolders,
-            method: 'copy'
+            method: 'copy',
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -1131,7 +1223,7 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
 
     // right click settings
 
-    var rightClickNode = document.getElementById("rightClick")
+    var rightClickNode = document.getElementById("rightClick");
     rightClickNode.style.display = "none";
 
     $scope.rightClickCallBack = function (event,trNode) {
@@ -1146,15 +1238,28 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             'left': event.pageX
         });
 
+        // If we want to enable download for this node
+
+        var downloadOnRight = document.getElementById("downloadOnRight");
+
+        if(trNode.lastChild.innerHTML === "File"){
+            downloadOnRight.style.display = "Block";
+        }else{
+            downloadOnRight.style.display = "none";
+        }
+
+
+
+
         $scope.addFileOrFolderToListForRightClick(trNode);
-    }
+    };
 
     $scope.addFileOrFolderToListForRightClick = function(nodeName){
 
         var check = 1;
         var getFileName = nodeName.getElementsByTagName('td')[0].innerHTML;
 
-        if(nodeName.style.backgroundColor == "aliceblue") {
+        if(nodeName.style.backgroundColor === "aliceblue") {
 
             var tempArray = [];
             nodeName.style.background = "None";
@@ -1187,7 +1292,7 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
         $scope.buttonActivator();
 
 
-    }
+    };
 
     // rename
 
@@ -1209,7 +1314,9 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
             basePath : $scope.currentPath,
             existingName: $scope.fileToRename,
             newFileName : $scope.newFileName,
-            method: 'rename'
+            method: 'rename',
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
         };
 
 
@@ -1236,7 +1343,272 @@ fileManager.controller('fileManagerCtrl', function($scope,$http,FileUploader) {
     };
 
 
+    // Fix permissions
 
+    $scope.fixPermissions = function() {
+
+        url = "/filemanager/changePermissions";
+
+
+        var data = {
+            domainName : domainName,
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
+        };
+
+
+        $http.post(url, data).then(ListInitialDatas, cantLoadInitialDatas);
+
+        function ListInitialDatas(response) {
+
+
+            if (response.data.permissionsChanged === 1) {
+                var notification = alertify.notify('Permissions successfully fixed!', 'success', 5, function(){  console.log('dismissed'); });
+                $scope.fetchForTableSecondary(null,'refresh');
+            }
+            else {
+                var notification = alertify.notify(response.data.error_message, 'error', 5, function(){  console.log('dismissed'); });
+                $scope.fetchForTableSecondary(null,'refresh');
+            }
+
+        }
+
+        function cantLoadInitialDatas(response) {
+        }
+
+    };
+
+    // Download files
+
+    $scope.downloadFile = function() {
+
+        url = "/filemanager/downloadFile";
+
+        var data = {
+            fileToDownload: $scope.currentPath + "/" + allFilesAndFolders[0],
+            domainRandomSeed:domainRandomSeed,
+            domainName: domainName
+        };
+
+
+        $http.post(url, data).then(ListInitialDatas, cantLoadInitialDatas);
+
+        function ListInitialDatas(response) {
+
+            var blob = new Blob([response.data]);
+
+            //IE case
+              if (!!window.navigator.msSaveBlob){
+                window.navigator.msSaveBlob(blob, allFilesAndFolders[0]);
+                return;
+              }
+
+              //create blob and url
+              var url = URL.createObjectURL(blob);
+
+              //create invisible acnhor, to specify the file name
+              var a = document.createElement('a');
+              document.body.appendChild(a);
+              a.style = "display: none";
+              a.href = url;
+              a.download = allFilesAndFolders[0];
+              a.click();
+
+              setTimeout(function(){
+                URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+              }, 100);
+        }
+
+        function cantLoadInitialDatas(response) {}
+
+    };
+
+
+    // Change permissions
+
+    $scope.changePermissionsLoading = true;
+
+    $scope.userPermissions = 0;
+    $scope.groupPermissions = 0;
+    $scope.wordlPermissions = 0;
+
+
+    $scope.showPermissionsModal = function () {
+        $('#showPermissions').modal('show');
+        $scope.permissionsPath = allFilesAndFolders[0];
+    };
+
+
+
+    $scope.updateReadPermissions = function (value) {
+
+        switch (value) {
+
+            case 'userRead':
+
+                if($scope.userRead === true)
+                {
+                    $scope.userPermissions = $scope.userPermissions + 4;
+                }
+                else
+                {
+                    if ($scope.userRead !== undefined) {
+                        $scope.userPermissions = $scope.userPermissions - 4;
+                    }
+                }
+                break;
+
+
+            case  'groupRead':
+                if ($scope.groupRead === true) {
+                    $scope.groupPermissions = $scope.groupPermissions + 4;
+                } else {
+                    if ($scope.groupRead !== undefined) {
+                        $scope.groupPermissions = $scope.groupPermissions - 4;
+                    }
+                }
+                break;
+
+
+            case 'worldRead':
+                if ($scope.worldRead === true) {
+                    $scope.wordlPermissions = $scope.wordlPermissions + 4;
+                } else {
+                    if ($scope.worldRead !== undefined) {
+                        $scope.wordlPermissions = $scope.wordlPermissions - 4;
+                    }
+                }
+                break;
+        }
+    };
+
+    $scope.updateWritePermissions = function (value) {
+
+        switch (value) {
+
+            case 'userWrite':
+
+                if($scope.userWrite === true)
+                {
+                    $scope.userPermissions = $scope.userPermissions + 2;
+                }
+                else
+                {
+                    if ($scope.userWrite !== undefined) {
+                        $scope.userPermissions = $scope.userPermissions - 2;
+                    }
+                }
+                break;
+
+
+            case  'groupWrite':
+                if ($scope.groupWrite === true) {
+                    $scope.groupPermissions = $scope.groupPermissions + 2;
+                } else {
+                    if ($scope.groupWrite !== undefined) {
+                        $scope.groupPermissions = $scope.groupPermissions - 2;
+                    }
+                }
+                break;
+
+
+            case 'worldWrite':
+                if ($scope.worldWrite === true) {
+                    $scope.wordlPermissions = $scope.wordlPermissions + 2;
+                } else {
+                    if ($scope.worldWrite !== undefined) {
+                        $scope.wordlPermissions = $scope.wordlPermissions - 2;
+                    }
+                }
+                break;
+        }
+    };
+
+    $scope.updateExecutePermissions = function (value) {
+
+        switch (value) {
+
+            case 'userExecute':
+
+                if($scope.userExecute === true)
+                {
+                    $scope.userPermissions = $scope.userPermissions + 1;
+                }
+                else
+                {
+                    if ($scope.userExecute !== undefined) {
+                        $scope.userPermissions = $scope.userPermissions - 1;
+                    }
+                }
+                break;
+
+
+            case  'groupExecute':
+                if ($scope.groupExecute === true) {
+                    $scope.groupPermissions = $scope.groupPermissions + 1;
+                } else {
+                    if ($scope.groupExecute !== undefined) {
+                        $scope.groupPermissions = $scope.groupPermissions - 1;
+                    }
+                }
+                break;
+
+
+            case 'worldExecute':
+                if ($scope.worldExecute === true) {
+                    $scope.wordlPermissions = $scope.wordlPermissions + 1;
+                } else {
+                    if ($scope.worldExecute !== undefined) {
+                        $scope.wordlPermissions = $scope.wordlPermissions - 1;
+                    }
+                }
+                break;
+        }
+    };
+
+
+    $scope.changePermissionsRecursively = function () {
+        $scope.changePermissions(1);
+    };
+
+
+    $scope.changePermissions = function (recursive) {
+
+        $scope.changePermissionsLoading = false;
+        var newPermissions = String($scope.userPermissions) + String($scope.groupPermissions) + String($scope.wordlPermissions);
+
+        var data = {
+            basePath : $scope.currentPath,
+            permissionsPath: $scope.permissionsPath,
+            method: 'changePermissions',
+            domainRandomSeed:domainRandomSeed,
+            recursive: recursive,
+            newPermissions: newPermissions,
+            domainName: domainName
+        };
+
+
+        $http.post(url, data).then(ListInitialDatas, cantLoadInitialDatas);
+
+        function ListInitialDatas(response) {
+
+            $scope.changePermissionsLoading = true;
+            $('#showPermissions').modal('hide');
+
+            if (response.data.permissionsChanged === 1) {
+                var notification = alertify.notify('Permissions Successfully Changed!', 'success', 5, function(){  console.log('dismissed'); });
+                $scope.fetchForTableSecondary(null,'refresh');
+            }
+            else {
+                var notification = alertify.notify(response.data.error_message, 'error', 5, function(){  console.log('dismissed'); });
+            }
+
+        }
+        function cantLoadInitialDatas(response) {
+        }
+
+    };
 
 
 

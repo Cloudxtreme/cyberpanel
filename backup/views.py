@@ -13,30 +13,27 @@ from loginSystem.views import loadLoginPage
 import os
 import time
 import plogical.backupUtilities as backupUtil
-from shutil import rmtree
 import shlex
 import subprocess
-import signal
 import requests
 from baseTemplate.models import version
 from plogical.virtualHostUtilities import virtualHostUtilities
 from random import randint
+from plogical.mailUtilities import mailUtilities
+
+
 
 def loadBackupHome(request):
     try:
         val = request.session['userID']
-
         admin = Administrator.objects.get(pk=val)
-
         viewStatus = 1
-
         if admin.type == 3:
             viewStatus = 0
 
         return render(request,'backup/index.html',{"viewStatus":viewStatus})
     except KeyError:
         return redirect(loadLoginPage)
-
 
 def restoreSite(request):
     try:
@@ -45,14 +42,16 @@ def restoreSite(request):
             admin = Administrator.objects.get(pk=request.session['userID'])
 
             if admin.type == 1:
-                path = "/home/backup"
+
+                path = os.path.join("/home","backup")
+
                 if not os.path.exists(path):
                     return render(request, 'backup/restore.html')
                 else:
                     all_files = []
                     ext = ".tar.gz"
 
-                    command = 'sudo chown -R  cyberpanel:cyberpanel '+path
+                    command = 'sudo chown -R  cyberpanel:cyberpanel '+ path
 
                     cmd = shlex.split(command)
 
@@ -77,8 +76,8 @@ def restoreSite(request):
 def backupSite(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
-            admin = Administrator.objects.get(pk=request.session['userID'])
 
             if admin.type == 1:
                 websites = Websites.objects.all()
@@ -113,18 +112,23 @@ def backupSite(request):
     except KeyError:
         return redirect(loadLoginPage)
 
-
 def getCurrentBackups(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
 
 
                 data = json.loads(request.body)
                 backupDomain = data['websiteToBeBacked']
-
                 website = Websites.objects.get(domain=backupDomain)
+
+                if admin.type != 1:
+                    if website.admin != admin:
+                        dic = {'fetchStatus': 0, 'error_message': "Only administrator can view this page."}
+                        json_data = json.dumps(dic)
+                        return HttpResponse(json_data)
 
                 backups = website.backups_set.all()
 
@@ -165,68 +169,35 @@ def getCurrentBackups(request):
         final_json = json.dumps(final_dic)
         return HttpResponse(final_json)
 
-
 def submitBackupCreation(request):
     try:
         if request.method == 'POST':
 
             data = json.loads(request.body)
-            backupDomain = data['websiteToBeBacked']
 
+            backupDomain = data['websiteToBeBacked']
             website = Websites.objects.get(domain=backupDomain)
 
             ## defining paths
 
-            backupPath = "/home/" + backupDomain + "/backup/"
+            ## /home/example.com/backup
+            backupPath = os.path.join("/home",backupDomain,"backup/")
+            domainUser = website.externalApp
+            backupName = 'backup-' + domainUser + "-" + time.strftime("%I-%M-%S-%a-%b-%Y")
 
-            domainUser = backupDomain.split('.')
-
-            backupName = 'backup-' + domainUser[0] + "-" + time.strftime("%I-%M-%S-%a-%b-%Y")
-
-            tempStoragePath = backupPath + backupName
-
-            ## Generating meta
-
-            metaPath = "/home/cyberpanel/" + str(randint(1000, 9999))
-
-            metaFile = open(metaPath, "w")
-
-            metaFile.write(backupDomain + "--" + website.phpSelection + "--" + website.externalApp + "\n")
-
-            childDomains = website.childdomains_set.all()
-
-            databases = website.databases_set.all()
-
-            metaFile.write("Child Domains\n")
-
-            for items in childDomains:
-                metaFile.write(items.domain + "--" + items.phpSelection + "--" + items.path + "\n")
-
-            metaFile.write("Databases\n")
-
-            for items in databases:
-                dbuser = DBUsers.objects.get(user=items.dbUser)
-                metaFile.write(items.dbName + "--" + items.dbUser + "--" + dbuser.password + "\n")
-
-            metaFile.close()
-
-            ## meta generated
+            ## /home/example.com/backup/backup-example-06-50-03-Thu-Feb-2018
+            tempStoragePath = os.path.join(backupPath,backupName)
 
             execPath = "sudo python " + virtualHostUtilities.cyberPanel + "/plogical/backupUtilities.py"
-
-            execPath = execPath + " submitBackupCreation --tempStoragePath " + tempStoragePath + " --backupName " + backupName + " --backupPath " + backupPath + " --metaPath " + metaPath
-
-
+            execPath = execPath + " submitBackupCreation --tempStoragePath " + tempStoragePath + " --backupName " \
+                       + backupName + " --backupPath " + backupPath + ' --backupDomain ' + backupDomain
 
             subprocess.Popen(shlex.split(execPath))
 
-            newBackup = Backups(website=website, fileName=backupName, date=time.strftime("%I-%M-%S-%a-%b-%Y"),
-                                size=0, status=0)
-            newBackup.save()
+            time.sleep(2)
 
             final_json = json.dumps({'metaStatus': 1, 'error_message': "None", 'tempStorage': tempStoragePath})
             return HttpResponse(final_json)
-
 
     except BaseException, msg:
         final_dic = {'metaStatus': 0, 'error_message': str(msg)}
@@ -242,12 +213,12 @@ def backupStatus(request):
                 data = json.loads(request.body)
                 backupDomain = data['websiteToBeBacked']
 
-                status = "/home/"+backupDomain+"/backup/status"
+                status = os.path.join("/home",backupDomain,"backup/status")
 
                 ## read file name
 
                 try:
-                    backupFileNamePath = "/home/" + backupDomain + "/backup/backupFileName"
+                    backupFileNamePath = os.path.join("/home",backupDomain,"backup/backupFileName")
                     command = "sudo cat " + backupFileNamePath
                     fileName = subprocess.check_output(shlex.split(command))
                 except:
@@ -259,14 +230,12 @@ def backupStatus(request):
                     command = "sudo cat " + status
                     status = subprocess.check_output(shlex.split(command))
 
-                    if status.find("completed")> -1:
+                    if status.find("Completed")> -1:
 
                         command = 'sudo rm -f ' + status
-                        cmd = shlex.split(command)
-                        res = subprocess.call(cmd)
+                        subprocess.call(shlex.split(command))
 
                         backupOb = Backups.objects.get(fileName=fileName)
-
                         backupOb.status = 1
 
                         ## adding backup data to database.
@@ -331,8 +300,6 @@ def cancelBackupCreation(request):
 
                 execPath = execPath + " cancelBackupCreation --backupCancellationDomain " + backupCancellationDomain + " --fileName " + fileName
 
-
-
                 subprocess.call(shlex.split(execPath))
 
                 try:
@@ -343,8 +310,6 @@ def cancelBackupCreation(request):
 
                 final_json = json.dumps({'abortStatus': 1, 'error_message': "None", "status": 0})
                 return HttpResponse(final_json)
-
-
         except BaseException,msg:
             final_dic = {'abortStatus': 0, 'error_message': str(msg)}
             final_json = json.dumps(final_dic)
@@ -359,14 +324,20 @@ def cancelBackupCreation(request):
 def deleteBackup(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
 
-
                 data = json.loads(request.body)
                 backupID = data['backupID']
-
                 backup = Backups.objects.get(id=backupID)
+
+                if admin.type != 1:
+                    if backup.website.admin != admin:
+                        dic = {'deleteStatus': 0, 'error_message': "Only administrator can view this page."}
+                        json_data = json.dumps(dic)
+                        return HttpResponse(json_data)
+
                 domainName = backup.website.domain
 
                 path = "/home/"+domainName+"/backup/"+backup.fileName+".tar.gz"
@@ -392,8 +363,6 @@ def deleteBackup(request):
         final_json = json.dumps(final_dic)
         return HttpResponse(final_json)
 
-
-
 def submitRestore(request):
     try:
         if request.method == 'POST':
@@ -412,9 +381,9 @@ def submitRestore(request):
 
             execPath = execPath + " submitRestore --backupFile " + backupFile + " --dir " + dir
 
-
-
             subprocess.Popen(shlex.split(execPath))
+
+            time.sleep(4)
 
             final_dic = {'restoreStatus': 1, 'error_message': "None"}
             final_json = json.dumps(final_dic)
@@ -433,19 +402,19 @@ def restoreStatus(request):
             data = json.loads(request.body)
             backupFile = data['backupFile'].strip(".tar.gz")
 
-            path = "/home/backup/" + data['backupFile']
+            path = os.path.join("/home","backup",data['backupFile'])
 
             if os.path.exists(path):
-                path = "/home/backup/" + backupFile
+                path = os.path.join("/home","backup",backupFile)
+            elif os.path.exists(data['backupFile']):
+                path = data['backupFile'].strip(".tar.gz")
             else:
                 dir = data['dir']
                 path = "/home/backup/transfer-" + str(dir) + "/" + backupFile
 
             if os.path.exists(path):
                 try:
-                    execPath = "sudo cat " + path+"/status"
-
-
+                    execPath = "sudo cat " + path + "/status"
 
                     status = subprocess.check_output(shlex.split(execPath))
 
@@ -483,14 +452,13 @@ def restoreStatus(request):
         final_json = json.dumps(final_dic)
         return HttpResponse(final_json)
 
-
 def backupDestinations(request):
     try:
         val = request.session['userID']
 
         admin = Administrator.objects.get(pk=val)
 
-        if admin.type==1:
+        if admin.type == 1:
             return render(request, 'backup/backupDestinations.html', {})
         else:
             return HttpResponse("You should be admin to add backup destinations.")
@@ -499,8 +467,15 @@ def backupDestinations(request):
 
 def submitDestinationCreation(request):
     try:
+        val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
+
+                if admin.type != 1:
+                    dic = {'destStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
 
 
                 destinations = backupUtil.backupUtilities.destinationsPath
@@ -509,6 +484,7 @@ def submitDestinationCreation(request):
                 ipAddress = data['IPAddress']
                 password = data['password']
                 port = "22"
+
                 try:
                     port = data['backupSSHPort']
                 except:
@@ -524,9 +500,10 @@ def submitDestinationCreation(request):
                     final_json = json.dumps(final_dic)
                     return HttpResponse(final_json)
                 except:
-                    setupKeys = backupUtil.backupUtilities.setupSSHKeys(ipAddress,password,port)
+                    setupKeys = backupUtil.backupUtilities.setupSSHKeys(ipAddress, password, port)
+
                     if setupKeys[0] == 1:
-                        backupUtil.backupUtilities.initiateBackupDirCreation(ipAddress,port)
+                        backupUtil.backupUtilities.createBackupDir(ipAddress,port)
                         try:
                             writeToFile = open(destinations, "w")
                             writeToFile.writelines(ipAddress + "\n")
@@ -561,8 +538,14 @@ def submitDestinationCreation(request):
 def getCurrentBackupDestinations(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
+
+                if admin.type != 1:
+                    dic = {'fetchStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
 
                 records = dest.objects.all()
 
@@ -603,7 +586,6 @@ def getConnectionStatus(request):
         try:
             if request.method == 'POST':
 
-
                 data = json.loads(request.body)
                 ipAddress = data['IPAddress']
 
@@ -630,8 +612,15 @@ def getConnectionStatus(request):
 
 def deleteDestination(request):
     try:
+        val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
+
+                if admin.type != 1:
+                    dic = {'delStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
 
 
                 data = json.loads(request.body)
@@ -717,8 +706,14 @@ def scheduleBackup(request):
 def getCurrentBackupSchedules(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
+
+                if admin.type != 1:
+                    dic = {'fetchStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
 
                 records = backupSchedules.objects.all()
 
@@ -755,11 +750,17 @@ def getCurrentBackupSchedules(request):
 def submitBackupSchedule(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
                 data = json.loads(request.body)
                 backupDest = data['backupDest']
                 backupFreq = data['backupFreq']
+
+                if admin.type != 1:
+                    dic = {'scheduleStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
 
                 path = "/etc/crontab"
 
@@ -959,11 +960,19 @@ def submitBackupSchedule(request):
 def scheduleDelete(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
+
+                if admin.type != 1:
+                    dic = {'delStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
+
                 data = json.loads(request.body)
                 backupDest = data['destLoc']
                 backupFreq = data['frequency']
+
 
                 path = "/etc/crontab"
 
@@ -1089,7 +1098,6 @@ def scheduleDelete(request):
         final_json = json.dumps({'delStatus': 0, 'error_message': str(msg)})
         return HttpResponse(final_json)
 
-
 def remoteBackups(request):
     try:
         userID = request.session['userID']
@@ -1105,16 +1113,23 @@ def remoteBackups(request):
 
 def submitRemoteBackups(request):
     try:
+        userID = request.session['userID']
+        admin = Administrator.objects.get(pk=userID)
         if request.method == 'POST':
+
+            if admin.type != 1:
+                dic = {'status': 0, 'error_message': "Only administrator can view this page."}
+                json_data = json.dumps(dic)
+                return HttpResponse(json_data)
 
             data = json.loads(request.body)
             ipAddress = data['ipAddress']
             password = data['password']
 
-            ## ask for remote version
+            ## Ask for Remote version of CyberPanel
 
             try:
-                finalData = json.dumps({'username': "admin","password": password})
+                finalData = json.dumps({'username': "admin", "password": password})
 
                 url = "https://" + ipAddress + ":8090/api/cyberPanelVersion"
 
@@ -1122,35 +1137,35 @@ def submitRemoteBackups(request):
 
                 data = json.loads(r.text)
 
-
                 if data['getVersion'] == 1:
 
-                    Version = version.objects.get(pk=1)
-
-                    if data['currentVersion'] == Version.currentVersion and data['build'] == Version.build:
+                    if float(data['currentVersion']) >= 1.6 and data['build'] >= 0:
                         pass
                     else:
-                        data_ret = {'status': 0, 'error_message': "Your version does not match with version of remote server.",
-                                    "dir": "Null" }
+                        data_ret = {'status': 0,
+                                    'error_message': "Your version does not match with version of remote server.",
+                                    "dir": "Null"}
                         data_ret = json.dumps(data_ret)
                         return HttpResponse(data_ret)
-
                 else:
-                    data_ret = {'status': 0, 'error_message': "Not able to fetch version of remote server. Error Message: "+data['error_message'], "dir": "Null"}
+                    data_ret = {'status': 0,
+                                'error_message': "Not able to fetch version of remote server. Error Message: " + data[
+                                    'error_message'], "dir": "Null"}
                     data_ret = json.dumps(data_ret)
                     return HttpResponse(data_ret)
-            except BaseException,msg:
+
+
+            except BaseException, msg:
                 data_ret = {'status': 0,
-                            'error_message': "Not able to fetch version of remote server. Error Message: " + str(msg), "dir": "Null"}
+                            'error_message': "Not able to fetch version of remote server. Error Message: " + str(msg),
+                            "dir": "Null"}
                 data_ret = json.dumps(data_ret)
                 return HttpResponse(data_ret)
 
 
-            ## setup ssh key
-
+            ## Fetch public key of remote server!
 
             finalData = json.dumps({'username': "admin", "password": password})
-
 
             url = "https://" + ipAddress + ":8090/api/fetchSSHkey"
             r = requests.post(url, data=finalData, verify=False)
@@ -1159,43 +1174,39 @@ def submitRemoteBackups(request):
             if data['pubKeyStatus'] == 1:
                 pubKey = data["pubKey"].strip("\n")
             else:
-                final_json = json.dumps({'status': 0, 'error_message': "I am sorry, I could not fetch key from remote server. Error Message: "+data['error_message']})
+                final_json = json.dumps({'status': 0,
+                                         'error_message': "I am sorry, I could not fetch key from remote server. Error Message: " + data['error_message']
+                                         })
                 return HttpResponse(final_json)
-
 
             ## write key
 
-            ##
+            ## Writing key to a temporary location, to be read later by backup process.
+
+            mailUtilities.checkHome()
 
             pathToKey = "/home/cyberpanel/" + str(randint(1000, 9999))
 
             vhost = open(pathToKey, "w")
-
             vhost.write(pubKey)
-
             vhost.close()
 
             ##
 
-
             execPath = "sudo python " + virtualHostUtilities.cyberPanel + "/plogical/remoteTransferUtilities.py"
-
             execPath = execPath + " writeAuthKey --pathToKey " + pathToKey
-
-
-
             output = subprocess.check_output(shlex.split(execPath))
 
             if output.find("1,None") > -1:
                 pass
             else:
-                final_json = json.dumps({'status': 0, 'type': 'exception', 'error_message': output})
+                final_json = json.dumps({'status': 0, 'error_message': output})
                 return HttpResponse(final_json)
 
             ##
 
             try:
-                finalData = json.dumps({'username': "admin","password": password})
+                finalData = json.dumps({'username': "admin", "password": password})
 
                 url = "https://" + ipAddress + ":8090/api/fetchAccountsFromRemoteServer"
 
@@ -1203,42 +1214,53 @@ def submitRemoteBackups(request):
 
                 data = json.loads(r.text)
 
-
                 if data['fetchStatus'] == 1:
                     json_data = data['data']
                     data_ret = {'status': 1, 'error_message': "None",
-                                "dir": "Null",'data':json_data}
+                                "dir": "Null", 'data': json_data}
                     data_ret = json.dumps(data_ret)
                     return HttpResponse(data_ret)
                 else:
-                    data_ret = {'status': 0, 'error_message': "Not able to fetch accounts from remote server. Error Message: "+data['error_message'], "dir": "Null"}
+                    data_ret = {'status': 0,
+                                'error_message': "Not able to fetch accounts from remote server. Error Message: " +
+                                                 data['error_message'], "dir": "Null"}
                     data_ret = json.dumps(data_ret)
                     return HttpResponse(data_ret)
-            except BaseException,msg:
+            except BaseException, msg:
                 data_ret = {'status': 0,
-                            'error_message': "Not able to fetch accounts from remote server. Error Message: " + str(msg), "dir": "Null"}
+                            'error_message': "Not able to fetch accounts from remote server. Error Message: " + str(
+                                msg), "dir": "Null"}
                 data_ret = json.dumps(data_ret)
                 return HttpResponse(data_ret)
         else:
             return HttpResponse("This URL only accepts POST requests")
 
     except BaseException, msg:
-        final_json = json.dumps({'status': 0, 'type':'exception', 'error_message': str(msg)})
-        return HttpResponse(final_json)
+        final_json = json.dumps({'status': 0, 'error_message': str(msg)})
+    return HttpResponse(final_json)
 
 def starRemoteTransfer(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == 'POST':
                 data = json.loads(request.body)
+
+                if admin.type != 1:
+                    dic = {'remoteTransferStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
 
                 ipAddress = data['ipAddress']
                 password = data['password']
                 accountsToTransfer = data['accountsToTransfer']
 
                 try:
-                    ownIP = requests.get('https://api.ipify.org').text
+
+                    ipFile = os.path.join("/etc","cyberpanel","machineIP")
+                    f = open(ipFile)
+                    ownIP = f.read()
 
                     finalData = json.dumps({'username': "admin", "password": password,"ipAddress": ownIP,"accountsToTransfer":accountsToTransfer})
 
@@ -1250,6 +1272,14 @@ def starRemoteTransfer(request):
 
 
                     if data['transferStatus'] == 1:
+
+                        ## Create local backup dir
+
+                        localBackupDir = os.path.join("/home","backup")
+
+                        if not os.path.exists(localBackupDir):
+                            command = "sudo mkdir " + localBackupDir
+                            subprocess.call(shlex.split(command))
 
                         ## create local directory that will host backups
 
@@ -1283,7 +1313,16 @@ def starRemoteTransfer(request):
 
 def getRemoteTransferStatus(request):
     try:
+        val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
+
         if request.method == "POST":
+
+            if admin.type != 1:
+                dic = {'remoteTransferStatus': 0, 'error_message': "Only administrator can view this page."}
+                json_data = json.dumps(dic)
+                return HttpResponse(json_data)
+
             data = json.loads(request.body)
             ipAddress = data['ipAddress']
             password = data['password']
@@ -1327,8 +1366,15 @@ def getRemoteTransferStatus(request):
 def remoteBackupRestore(request):
     try:
         val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         try:
             if request.method == "POST":
+
+                if admin.type != 1:
+                    dic = {'remoteRestoreStatus': 0, 'error_message': "Only administrator can view this page."}
+                    json_data = json.dumps(dic)
+                    return HttpResponse(json_data)
+
                 data = json.loads(request.body)
                 backupDir = data['backupDir']
 
@@ -1341,9 +1387,9 @@ def remoteBackupRestore(request):
 
                 execPath = execPath + " remoteBackupRestore --backupDirComplete " + backupDirComplete + " --backupDir " + str(backupDir)
 
-
-
                 subprocess.Popen(shlex.split(execPath))
+
+                time.sleep(3)
 
                 data = {'remoteRestoreStatus': 1, 'error_message': 'None'}
                 json_data = json.dumps(data)
@@ -1364,7 +1410,15 @@ def remoteBackupRestore(request):
 
 def localRestoreStatus(request):
     try:
+        val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
         if request.method == "POST":
+
+            if admin.type != 1:
+                data_ret = {'remoteTransferStatus': 0, 'error_message': "No such log found", "status": "None",
+                            "complete": 0}
+                json_data = json.dumps(data_ret)
+                return HttpResponse(json_data)
 
             data = json.loads(request.body)
             backupDir = data['backupDir']
@@ -1374,8 +1428,9 @@ def localRestoreStatus(request):
 
             removalPath = "/home/backup/transfer-"+ str(backupDir)
 
-            if os.path.isfile(backupLogPath):
+            time.sleep(3)
 
+            if os.path.isfile(backupLogPath):
                 command = "sudo cat " + backupLogPath
                 status = subprocess.check_output(shlex.split(command))
 
@@ -1409,6 +1464,13 @@ def localRestoreStatus(request):
 
 def cancelRemoteBackup(request):
     try:
+        val = request.session['userID']
+        admin = Administrator.objects.get(pk=val)
+
+        if admin.type != 1:
+            dic = {'cancelStatus': 0, 'error_message': "Only administrator can view this page."}
+            json_data = json.dumps(dic)
+            return HttpResponse(json_data)
 
         if request.method == "POST":
 
@@ -1430,29 +1492,20 @@ def cancelRemoteBackup(request):
                 logging.CyberCPLogFileWriter.writeToFile("Some error cancelling at remote server, see the log file for remote server.")
 
             path = "/home/backup/transfer-" + str(dir)
+            pathpid = path + "/pid"
 
-            if os.path.exists(path):
-                try:
-                    pathpid = path + "/pid"
+            command = "sudo cat " + pathpid
+            pid = subprocess.check_output(shlex.split(command))
 
-                    pid = open(pathpid, "r").readlines()[0]
+            command = "sudo kill -KILL " + pid
+            subprocess.call(shlex.split(command))
 
-                    try:
-                        os.kill(int(pid), signal.SIGKILL)
-                    except BaseException, msg:
-                        logging.CyberCPLogFileWriter.writeToFile(str(msg) + " [cancelRemoteBackup]")
+            command = "sudo rm -rf " + path
+            subprocess.call(shlex.split(command))
 
-                    rmtree(path)
-                except:
-                    rmtree(path)
-
-                data = {'cancelStatus': 1, 'error_message': "None"}
-                json_data = json.dumps(data)
-                return HttpResponse(json_data)
-            else:
-                data = {'cancelStatus': 1, 'error_message': "None"}
-                json_data = json.dumps(data)
-                return HttpResponse(json_data)
+            data = {'cancelStatus': 1, 'error_message': "None"}
+            json_data = json.dumps(data)
+            return HttpResponse(json_data)
 
 
     except BaseException, msg:

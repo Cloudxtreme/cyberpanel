@@ -24,14 +24,10 @@ urlpatterns = [
     url(r'^getWebsiteDetails', views.submitWebsiteModify, name='getWebsiteDetails'),
     url(r'^saveWebsiteChanges', views.saveWebsiteChanges, name='saveWebsiteChanges'),
 
-
-    url(r'^(?P<domain>([\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+)([\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?)$', views.domain, name='domain'),
+    url(r'^(?P<domain>([\da-z\.-]+\.[a-z\.]{2,12}|[\d\.]+)([\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?)/(?P<childDomain>([\da-z\.-]+\.[a-z\.]{2,12}|[\d\.]+)([\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?)$', views.launchChild, name='launchChild'),
+    url(r'^(?P<domain>([\da-z\.-]+\.[a-z\.]{2,12}|[\d\.]+)([\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?)$', views.domain, name='domain'),
     url(r'^getDataFromLogFile', views.getDataFromLogFile, name='getDataFromLogFile'),
     url(r'^fetchErrorLogs', views.fetchErrorLogs, name='fetchErrorLogs'),
-
-
-    url(r'^installWordpress', views.installWordpress, name='installWordpress'),
-    url(r'^installJoomla', views.installJoomla, name='installJoomla'),
     
     url(r'^getDataFromConfigFile', views.getDataFromConfigFile, name='getDataFromConfigFile'),
 
@@ -44,9 +40,6 @@ urlpatterns = [
 
     url(r'^saveSSL', views.saveSSL, name='saveSSL'),
 
-
-    url(r'^CreateWebsiteFromBackup', views.CreateWebsiteFromBackup, name='CreateWebsiteFromBackup'),
-
     ## sub/add/park domains
 
     url(r'^submitDomainCreation', views.submitDomainCreation, name='submitDomainCreation'),
@@ -56,6 +49,44 @@ urlpatterns = [
     url(r'^fetchDomains', views.fetchDomains, name='submitDomainCreation'),
     url(r'^changePHP', views.changePHP, name='changePHP'),
     url(r'^submitDomainDeletion', views.submitDomainDeletion, name='submitDomainDeletion'),
+
+    # crons
+
+    url(r'^listCron',views.listCron,name="listCron"),
+    url(r'^getWebsiteCron',views.getWebsiteCron,name="getWebsiteCron"),
+    url(r'^getCronbyLine',views.getCronbyLine,name="getCronbyLine"),
+    url(r'^remCronbyLine',views.remCronbyLine,name="remCronbyLine"),
+    url(r'^saveCronChanges',views.saveCronChanges,name="saveCronChanges"),
+    url(r'^addNewCron',views.addNewCron,name="addNewCron"),
+
+
+    ## Domain Alias
+
+    url(r'^(?P<domain>([\da-z\.-]+\.[a-z\.]{2,12}|[\d\.]+)([\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?)/domainAlias$', views.domainAlias, name='domainAlias'),
+    url(r'^submitAliasCreation',views.submitAliasCreation,name="submitAliasCreation"),
+    url(r'^issueAliasSSL',views.issueAliasSSL,name="issueAliasSSL"),
+    url(r'^delateAlias',views.delateAlias,name="delateAlias"),
+
+
+    ## Openbasedir
+    url(r'^changeOpenBasedir$',views.changeOpenBasedir,name="changeOpenBasedir"),
+
+
+    ## Application Installer
+
+    url(r'^applicationInstaller$',views.applicationInstaller,name="applicationInstaller"),
+
+    ## WP Install
+
+    url(r'^(?P<domain>([\da-z\.-]+\.[a-z\.]{2,12}|[\d\.]+)([\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?)/wordpressInstall$', views.wordpressInstall, name='wordpressInstall'),
+    url(r'^installWordpressStatus$',views.installWordpressStatus,name="installWordpressStatus"),
+    url(r'^installWordpress$', views.installWordpress, name='installWordpress'),
+
+
+    ## Joomla Install
+
+    url(r'^installJoomla$', views.installJoomla, name='installJoomla'),
+    url(r'^(?P<domain>([\da-z\.-]+\.[a-z\.]{2,12}|[\d\.]+)([\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?)/joomlaInstall$', views.joomlaInstall, name='joomlaInstall'),
 
 
 ]
